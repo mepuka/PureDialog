@@ -1,0 +1,5 @@
+{
+  "name": "Gemini YouTube Transcriber",
+  "description": "An advanced application that extracts YouTube links from text and generates high-quality, speaker-diarized transcripts using Gemini's multimodal capabilities.",
+  "requestFramePermissions": []
+}

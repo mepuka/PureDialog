@@ -5,8 +5,6 @@ steps:
     args:
       - "build"
       - "-t"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:${SHORT_SHA}"
-      - "-t"
       - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
       - "."
     id: "build-image"
@@ -15,8 +13,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args:
       - "push"
-      - "--all-tags"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
     id: "push-image"
 
   # Deploy to Cloud Run with secure configuration
@@ -26,7 +23,7 @@ steps:
       - "deploy"
       - "${_SERVICE_NAME}"
       - "--image"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:${SHORT_SHA}"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
       - "--region"
       - "${_REGION}"
       - "--platform"
@@ -53,6 +50,18 @@ steps:
       - "--set-secrets"
       - "GEMINI_API_KEY=gemini-api-key:latest"
     id: "deploy-service"
+
+  # Allow unauthenticated access
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "run"
+      - "services"
+      - "add-iam-policy-binding"
+      - "${_SERVICE_NAME}"
+      - "--member=allUsers"
+      - "--role=roles/run.invoker"
+      - "--region=${_REGION}"
+    id: "allow-unauthenticated"
 
 # Substitution variables
 substitutions:

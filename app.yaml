@@ -18,7 +18,7 @@ env_variables:
   NODE_ENV: production
 
 # Service account
-service_account: pure-dialog-sa@gen-lang-client-0874846742.iam.gserviceaccount.com
+service_account: 211636922435-compute@developer.gserviceaccount.com
 
 # Health check configuration
 readiness_check:
@@ -77,5 +77,3 @@ handlers:
     script: auto
     secure: always
     redirect_http_response_code: 301
-# Note: skip_files not supported in nodejs24 runtime
-# File exclusions are handled by .gcloudignore instead

@@ -56,13 +56,13 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 
-# Source files (we only need built dist/)
-src/
-index.html
-vite.config.ts
-tsconfig.json
-tailwind.config.js
-postcss.config.js
+# Keep source files for App Engine build
+# src/ - keep (source code needed for build)
+# index.html - keep (Vite entry point)
+# vite.config.ts - keep (build configuration)
+# tsconfig.json - keep (TypeScript config)
+# tailwind.config.js - keep (styling config)
+# postcss.config.js - keep (CSS processing)
 pnpm-lock.yaml
 
 # Keep only what's needed for production

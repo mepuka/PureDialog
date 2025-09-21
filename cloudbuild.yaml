@@ -20,12 +20,6 @@ steps:
       - "--promote"
     id: "deploy-app"
 
-# Substitution variables (kept for compatibility)
-substitutions:
-  _REGION: "us-west1"
-  _SERVICE_NAME: "pure-dialog"
-  _SERVICE_ACCOUNT: "pure-dialog-sa@gen-lang-client-0874846742.iam.gserviceaccount.com"
-
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: "E2_HIGHCPU_8"

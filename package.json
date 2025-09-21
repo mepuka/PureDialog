@@ -13,7 +13,8 @@
     "deploy:appengine": "gcloud app deploy app.yaml --quiet",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.js,.mjs",
-    "lint:fix": "eslint . --ext .ts,.js,.mjs --fix"
+    "lint:fix": "eslint . --ext .ts,.js,.mjs --fix",
+    "gcp-build": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

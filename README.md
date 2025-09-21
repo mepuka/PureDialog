@@ -159,18 +159,21 @@ pnpm type-check   # TypeScript type checking
 
 ```
 PureDialog/
-├── components/           # React components
-│   ├── Header.tsx
-│   ├── TranscriptView.tsx
-│   ├── VideoQueue.tsx
-│   └── icons/
-├── services/
-│   └── geminiService.ts  # Gemini API integration
-├── utils/
-│   └── youtube.ts        # YouTube URL parsing
-├── types.ts              # TypeScript definitions
-├── App.tsx               # Main application
+├── src/                  # Source code
+│   ├── components/       # React components
+│   │   ├── Header.tsx
+│   │   ├── TranscriptView.tsx
+│   │   ├── VideoQueue.tsx
+│   │   └── icons/
+│   ├── services/
+│   │   └── geminiService.ts  # Gemini API integration
+│   ├── utils/
+│   │   └── youtube.ts        # YouTube URL parsing
+│   ├── types.ts              # TypeScript definitions
+│   ├── App.tsx               # Main application
+│   └── index.tsx             # React entry point
 ├── server.js             # Node.js HTTP server
+├── index.html            # HTML template
 ├── Dockerfile            # Container configuration
 ├── cloudbuild.yaml       # Cloud Build configuration
 └── deploy.sh             # Deployment script

@@ -108,11 +108,10 @@ export const transcribeVideo = async (
   onChunk: (accumulatedText: string) => void,
   signal: AbortSignal
 ): Promise<{ transcript: Transcript; metadata?: UsageMetadata }> => {
-  // Try GEMINI_API_KEY first (standard), then API_KEY (legacy)
-  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "The GEMINI_API_KEY environment variable is not set. Please configure it to use the application."
+      "The VITE_GEMINI_API_KEY environment variable is not set. Please configure it to use the application."
     );
   }
   const ai = new GoogleGenAI({ apiKey });

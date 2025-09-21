@@ -279,22 +279,6 @@ Note: Use relative paths when analyzing progress:
 - node scripts/analyze-jsdoc.mjs --file=[RelativePath]
 ```
 
-### Development Workflow for Documentation
-
-**Step-by-Step Process:**
-
-1. **Identify Target Files**: Use `node scripts/analyze-jsdoc.mjs` to find missing documentation
-2. **Prioritize Files**: Focus on high-impact, frequently used modules
-3. **Read and Understand**: Analyze the target file structure and purpose
-4. **Add Examples Systematically**: Follow the example structure below
-5. **Validate**: Ensure all examples compile and lint correctly
-
-**IMPORTANT: After each edit, run linting:**
-
-```bash
-pnpm lint --fix packages/effect/src/TargetFile.ts
-```
-
 ### Writing Examples Guidelines
 
 **Example Structure:**
@@ -510,72 +494,6 @@ For low-level or advanced functions that are rarely used directly:
  */
 ````
 
-### Validation and Testing
-
-**Required Checks (run after every edit):**
-
-```bash
-# 1. Fix linting issues immediately
-pnpm lint --fix packages/effect/src/ModifiedFile.ts
-
-# 2. Verify examples compile
-pnpm docgen
-
-# 3. Verify type checking
-pnpm check
-
-# 4. Confirm progress
-node scripts/analyze-jsdoc.mjs --file=ModifiedFile.ts
-```
-
-**Success Criteria:**
-
-- ✅ Zero compilation errors in `pnpm docgen`
-- ✅ All lint checks pass
-- ✅ Examples demonstrate practical usage
-- ✅ 100% coverage achieved for target file
-- ✅ Documentation follows Effect patterns
-
-### Common Issues to Avoid
-
-- ❌ **Using `any` types** - Always use proper TypeScript types
-- ❌ **Non-compiling examples** - All code must pass `pnpm docgen`
-- ❌ **Import errors** - Check module exports and correct import paths
-- ❌ **Namespace confusion** - Use correct type references (e.g., `Schedule.InputMetadata`)
-- ❌ **Array vs Tuple issues** - Pay attention to exact type requirements
-- ❌ **Missing Effect imports** - Import all necessary Effect modules
-- ❌ **Outdated patterns** - Use current Effect API, not deprecated approaches
-- ❌ **Incorrect nested type access** - Use `Module.Namespace.Type` syntax for nested types
-- ❌ **Wrong type extractor examples** - Type-level utilities should show type extraction, not instance creation
-- ❌ **Wrong schema imports** - Use `effect/schema` (lowercase), not `effect/Schema` or `@effect/schema`
-- ❌ **Missing Schema import** - Always import Schema when using schema functions
-- ❌ **Incorrect validation patterns** - Use `decodeUnknownSync` for sync validation, `decodeUnknownEffect` for async
-
-### Success Metrics
-
-**Per File:**
-
-- 100% JSDoc coverage (all exports have @example tags)
-- Zero compilation errors in docgen
-- All functions have appropriate @category tags
-- Examples demonstrate practical, real-world usage
-
-**Per Module Domain:**
-
-- Core modules (Effect, Array, Chunk, etc.) should be prioritized
-- Schema modules (Schema, AST, etc.) benefit from validation examples
-- Stream/concurrency modules benefit from complex examples
-- Utility modules need practical, everyday use cases
-- Type-level modules need clear constraint examples
-
-**Long-term Impact:**
-
-- Improves developer experience with comprehensive examples
-- Reduces learning curve for Effect library adoption
-- Enhances IDE support with better IntelliSense
-- Ensures maintainability with consistent documentation patterns
-- Builds institutional knowledge through practical examples
-
 ## Code Style Guidelines
 
 ### TypeScript Quality Standards
@@ -742,9 +660,6 @@ it.effect("test", () =>
 - `packages/effect/` - Core Effect library
 - `packages/platform-node/` - Node.js platform implementation
 - `packages/platform-node-shared/` - Shared Node.js utilities
-- `packages/vitest/` - Vitest testing utilities
-
-## Key Directories
 
 ## Development Patterns Reference
 

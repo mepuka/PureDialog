@@ -36,10 +36,10 @@ liveness_check:
   failure_threshold: 4
   success_threshold: 2
 
-# Network settings
-vpc_access_connector:
-  name: "projects/gen-lang-client-0874846742/locations/us-west1/connectors/default"
-  egress_setting: all-traffic
+# Network settings (VPC connector removed for now)
+# vpc_access_connector:
+#   name: "projects/gen-lang-client-0874846742/locations/us-west1/connectors/default"
+#   egress_setting: all-traffic
 
 # Security headers
 handlers:

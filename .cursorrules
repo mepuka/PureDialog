@@ -1,0 +1,199 @@
+# PureDialog Development Rules
+
+## Project Context
+
+This is a React + TypeScript application for YouTube video transcription and AI analysis, built with Effect functional programming patterns.
+
+## Core Development Principles
+
+### Effect-First Development
+
+- Always implement using Effect library principles and patterns
+- Prefer data-first piped style with minimal imperative code
+- Use TypeScript best practices for type safety
+- Reference Effect documentation before implementation
+- Determine appropriate Effect libraries, data types, schemas, and patterns
+
+### Code Quality Standards
+
+- **Type Safety**: NEVER use `any` type or `as any` assertions
+- **Explicit Types**: Use concrete types over generic `unknown` where possible
+- **Input Validation**: Validate all inputs at boundaries
+- **Error Handling**: Use proper Effect error management patterns
+- **Early Returns**: Prefer early returns for better readability
+
+## Development Commands
+
+### @new-feature Command
+
+🚨 **MANDATORY SPEC-DRIVEN DEVELOPMENT** 🚨
+
+This command ONLY handles feature development that follows the complete 5-phase specification process.
+
+**CRITICAL**: This command ONLY handles feature development that follows the complete 5-phase specification process. Any request that is not a new feature requiring full specification MUST BE REFUSED.
+
+**DO NOT USE THIS COMMAND FOR:**
+
+- Bug fixes, cleanup tasks, refactoring, or maintenance work
+- Simple changes that don't require full feature specification
+- Any work that bypasses the 5-phase specification process
+
+**ONLY USE THIS COMMAND FOR:**
+
+- Net-new features that require complete specification and design
+- Features that need user stories, acceptance criteria, and technical design
+- Complex functionality additions that benefit from structured planning
+
+#### Tasks:
+
+1. **Create Feature Branch**
+
+   - Create a new git branch for this feature using a descriptive name (e.g., `feature/user-authentication`, `feature/todo-persistence`)
+   - Use kebab-case naming convention for branch names
+
+2. **Initialize Feature Specification**
+
+   - Ask the user for the feature name (kebab-case format for folder naming)
+   - Create the feature specification folder: `specs/[feature-name]/`
+   - Create the initial `instructions.md` file based on user requirements
+
+3. **Guide Instructions Creation**
+
+   - Help the user create a comprehensive `instructions.md` file that captures:
+     - **Feature Overview**: What is this feature and why is it needed?
+     - **User Stories**: Who will use this feature and how?
+     - **Acceptance Criteria**: What defines "done" for this feature?
+     - **Constraints**: Any technical, business, or time constraints
+     - **Dependencies**: What other systems/features does this depend on?
+     - **Out of Scope**: What is explicitly NOT included in this feature
+
+4. **Update Feature Directory**
+   - Add the new feature to `specs/README.md` as a new entry
+   - Use the format: `- [ ] **[feature-name](./feature-name/)** - Brief feature description`
+
+#### Process Flow:
+
+This follows the spec-driven development workflow with **MANDATORY USER AUTHORIZATION** before proceeding to each phase:
+
+- **Phase 1**: Create `instructions.md` (initial requirements capture)
+- **Phase 2**: Derive `requirements.md` from instructions (structured analysis) - **REQUIRES USER APPROVAL**
+- **Phase 3**: Create `design.md` from requirements (technical design) - **REQUIRES USER APPROVAL**
+- **Phase 4**: Generate `plan.md` from design (implementation roadmap) - **REQUIRES USER APPROVAL**
+- **Phase 5**: Execute implementation following the plan - **REQUIRES USER APPROVAL**
+
+**CRITICAL RULE**: Never proceed to the next phase without explicit user authorization. Always present the completed work from the current phase and ask for permission to continue.
+
+#### Authorization Protocol:
+
+Before proceeding to any phase (2-5), you MUST:
+
+1. Present the completed work from the current phase
+2. Explicitly ask for user authorization to proceed
+3. Wait for clear user approval before continuing
+4. Never assume permission or proceed automatically
+
+### @done-feature Command
+
+When a feature is complete:
+
+- Update specs with progress
+- Commit everything
+- Create PR
+
+## Code Style Guidelines
+
+### TypeScript Quality Standards
+
+- **Type Safety**: NEVER use `any` type or `as any` assertions
+- **Explicit Types**: Use concrete types over generic `unknown` where possible
+- **Type Annotations**: Add explicit annotations when inference fails
+- **Early Returns**: Prefer early returns for better readability
+- **Input Validation**: Validate all inputs at boundaries
+- **Error Handling**: Use proper Effect error management patterns
+
+### Effect Library Conventions
+
+- Follow existing TypeScript patterns in the codebase
+- Use functional programming principles
+- Maintain consistency with Effect library conventions
+- Use proper Effect constructors (e.g., `Array.make()`, `Chunk.fromIterable()`)
+- Prefer `Effect.gen` for monadic composition
+- Use `Data.TaggedError` for custom error types
+- Implement resource safety with automatic cleanup patterns
+
+### Code Organization
+
+- No comments unless explicitly requested
+- Follow existing file structure and naming conventions
+- Delete old code when replacing functionality
+- Choose clarity over cleverness in all implementations
+
+## Implementation Standards
+
+### Completeness Criteria
+
+Code is considered complete only when:
+
+- All linters pass
+- All tests pass
+- All type checks pass
+- Feature works end-to-end
+- Old/deprecated code is removed
+- Documentation is updated
+
+### Testing Requirements
+
+- Test files are located in appropriate test directories
+- Use existing test patterns and utilities
+- Always verify implementations with tests
+- For time-dependent code, always use TestClock to avoid flaky tests
+
+### Performance Considerations
+
+- Measure first before optimizing
+- Prefer eager evaluation patterns where appropriate
+- Consider memory usage and optimization
+- Follow established performance patterns in the codebase
+- Prioritize clarity over premature optimization
+
+## Problem-Solving Approach
+
+### When Encountering Complex Issues
+
+1. **Stop and Analyze**: Don't spiral into increasingly complex solutions
+2. **Break Down**: Divide complex problems into smaller, manageable parts
+3. **Research First**: Always understand existing patterns before creating new ones
+4. **Validate Frequently**: Use checkpoints to ensure you're on track
+5. **Simplify**: Choose the simplest solution that meets requirements
+6. **Ask for Help**: Request guidance rather than guessing
+
+### Development Workflow
+
+1. **Research Phase**: Understand the codebase and existing patterns
+2. **Planning Phase**: Create detailed implementation plan with validation checkpoints
+3. **Implementation Phase**: Execute with frequent validation and automated checks
+
+## File Structure
+
+- `src/` - Main application source code
+- `src/components/` - React components
+- `src/services/` - Service layer implementations
+- `src/utils/` - Utility functions
+- `src/types.ts` - Type definitions
+- `patterns/` - Development patterns and best practices
+- `specs/` - Feature specifications (when using spec-driven development)
+
+## Dependencies
+
+- React + TypeScript for UI
+- Effect library for functional programming
+- Vite for build tooling
+- Tailwind CSS for styling
+- Various Effect ecosystem packages
+
+## Git Workflow
+
+- Main branch: `main`
+- Create feature branches for new work
+- Use conventional commit messages
+- Only commit when explicitly requested

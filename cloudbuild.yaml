@@ -49,6 +49,7 @@ steps:
       - "NODE_ENV=production"
       - "--set-secrets"
       - "GEMINI_API_KEY=gemini-api-key:latest"
+      - "VITE_GEMINI_API_KEY=gemini-api-key:latest"
     id: "deploy-service"
 
   # Allow unauthenticated access

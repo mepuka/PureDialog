@@ -1,0 +1,21 @@
+{
+  "name": "@puredialog/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.16.16",
+    "@effect/schema": "^0.68.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}

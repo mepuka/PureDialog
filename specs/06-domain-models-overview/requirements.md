@@ -11,13 +11,13 @@ Define canonical domain contracts in `packages/domain` with `Schema` + construct
 - Status & Lifecycle
   - `JobStatus` closed union; transitions constrained in helpers.
 - Core Aggregates
-  - `VideoMetadata`, `ProcessingJob`, `SpeakerRole`, `SpeakerTurn`, `Transcript`, `TranscriptSummary`, `LLMMetrics`, `LLMCall`, `ValidationResults`.
+  - `VideoMetadata`, `ProcessingJob`, `SpeakerRole`, `SpeakerTurn`, `Transcript`, `TranscriptSummary`, `PromptMetadata`, `PromptContext`, `TopicTag`, `VocabHints`, `ChannelTopicModel`, `GlossaryStats`, `LLMMetrics`, `LLMCall`, `ValidationResults`.
   - Provide `Schema.decodeUnknownEffect` and safe constructors for each.
 - Errors
   - `ValidationError`, `TranscriptionError`, `ExternalServiceError`, `QuotaError` using `Data.TaggedError`.
   - Export `DomainError` union.
 - Events & Codecs
-  - `JobQueuedEvent`, `JobStatusChangedEvent`, `TranscriptReadyEvent`, `JobFailedEvent` with codecs.
+  - `JobQueuedEvent`, `JobStatusChangedEvent`, `TranscriptReadyEvent`, `JobFailedEvent`, `MetadataAppliedEvent` with codecs.
 
 #### Non-Functional Requirements
 

@@ -4,16 +4,16 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "pnpm -C apps/web dev",
+    "build": "pnpm -w -r build",
     "start": "node server.js",
-    "preview": "vite preview",
+    "preview": "pnpm -C apps/web preview",
     "setup": "bash setup.sh",
     "deploy": "bash deploy.sh",
     "deploy:appengine": "gcloud app deploy app.yaml --quiet",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.js,.mjs",
-    "lint:fix": "eslint . --ext .ts,.js,.mjs --fix",
+    "typecheck": "pnpm -w -r run typecheck",
+    "lint": "pnpm -w -r run lint",
+    "lint:fix": "pnpm -w -r exec eslint . --ext .ts,.tsx,.js,.mjs --fix",
     "gcp-build": "npm run build"
   },
   "devDependencies": {

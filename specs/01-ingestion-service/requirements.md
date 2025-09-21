@@ -7,16 +7,17 @@ Effect HTTP façade that accepts YouTube URLs, resolves speaker roles, deduplica
 #### Functional Requirements
 
 - Endpoints
-  - POST `/api/v1/ingest` accepts `{ url, userId, speakers? }`.
+  - POST `/api/v1/ingest` accepts `{ url, userId, speakers?, metadata? }`.
   - GET `/api/v1/jobs/:jobId` returns status projection.
   - GET `/api/v1/jobs/:jobId/metadata` returns `VideoMetadata` snapshot.
 - Behavior
   - Parse and validate URL → `VideoId` via domain decoder.
-  - Resolve `SpeakerRoleRegistry` mapping (create or reuse canonical roles).
+  - Resolve `SpeakerRoleRegistry` mapping (create or reuse canonical roles) using fallback hierarchy (registry → metadata → payload → generic `HOST/GUEST`).
   - Deduplicate via `DedupStore.acquire(videoId, userId)`.
   - Fetch `VideoMetadata` with `YouTubeClient` and store snapshot on job.
-  - Create `ProcessingJob{status: Queued}`; publish to topic `transcription-jobs` with codec.
-  - Emit `JobStatusChangedEvent (Queued → MetadataFetched)` upon publish.
+  - Refresh or reuse `ChannelTopicModel` when channel fingerprint changes; attach `topicHints`/`vocabHints` to job metadata.
+  - Create `ProcessingJob{status: Queued}` with `metadataSnapshot`, `topicHints`, `preambleHash`; publish to topic `transcription-jobs` with codec including `userId`/`metadataVersion` attributes.
+  - Emit `JobStatusChangedEvent (Queued → MetadataFetched)` and `MetadataAppliedEvent` upon publish.
 
 #### Non-Functional Requirements
 
@@ -37,17 +38,18 @@ Effect HTTP façade that accepts YouTube URLs, resolves speaker roles, deduplica
 
 #### Observability Requirements
 
-- Logs: `ingestion.request.accepted`, `ingestion.job.dedupe_hit`, `ingestion.job.published`.
-- Metrics: `ingestion_jobs_total{result}`, `ingestion_latency_ms` histogram.
+- Logs: `ingestion.request.accepted`, `ingestion.job.dedupe_hit`, `ingestion.job.published`, `metadata.applied`, `metadata.missing` (include missing field list).
+- Metrics: `ingestion_jobs_total{result}`, `ingestion_latency_ms` histogram, `metadata.applied_total`, `metadata.missing_fields_total`, `nlp.topic_tags_generated_total`.
 
 #### Acceptance Criteria
 
-- [ ] All endpoints implemented with Effect handlers and schema validation.
-- [ ] Pub/Sub publish uses domain codec; attributes include `jobId`, `videoId`, `schemaVersion`.
+- [ ] All endpoints implemented with Effect handlers and schema validation (including `metadata` payload).
+- [ ] Pub/Sub publish uses domain codec; attributes include `jobId`, `videoId`, `schemaVersion`, `userId`, `metadataVersion`.
 - [ ] Dedupe prevents duplicate job creation under concurrent requests.
+- [ ] ChannelTopicModel cache updates and logs/metrics recorded.
 - [ ] Structured errors and logs verified via local tests.
 
 #### Improvements/Simplifications
 
-- Defer `speakers` auto-inference; require explicit host/guest initially to reduce ambiguity.
 - Cache YouTube metadata for short TTL (e.g., 10 minutes) to avoid repeated API calls.
+- Phase follow-up to persist ChannelTopicModel in storage adapter beyond memory (spec 03).

@@ -9,7 +9,7 @@ Worker that consumes `ProcessingJob` messages, orchestrates Gemini transcription
 1. Subscriber Layer reads from `transcription-jobs` topic using `ProcessingJobPayloadCodec`.
 2. For each message:
    - Ack deadline set via backpressure policy (max 5 concurrent jobs by default).
-   - Transition job status to `Processing` with `JobStatusChangedEvent` (`previous: MetadataFetched`).
+   - Transition job status to `Processing` with `JobStatusChangedEvent` (`previous: MetadataFetched`); subsequent retries stay within `Processing` and emit telemetry events only (no duplicate status transitions).
    - Load speaker roles from `SpeakerRoleRegistry` (fail fast if missing).
    - Fetch latest `VideoMetadata` and compare against snapshot (duration delta ≤ 2%).
 
@@ -17,7 +17,7 @@ Worker that consumes `ProcessingJob` messages, orchestrates Gemini transcription
 
 - **Gemini Call**
   - Use Effect streaming helpers to accumulate JSON; wrap with `LLMCall` instrumentation.
-  - Prompt includes canonical host/guest labels from domain package.
+  - Prompt assembled via `PromptBuilder` using merged `PromptContext` (video metadata + prompt metadata + topic hints) and includes canonical host/guest labels from domain package.
   - On completion, build `Transcript` using domain Schema; decoding must pass `Schema.decodeUnknownEffect`.
 
 - **Validation**
@@ -26,7 +26,8 @@ Worker that consumes `ProcessingJob` messages, orchestrates Gemini transcription
 
 - **Persistence & Events**
   - Persist transcript via `TranscriptStore.put(transcript)`.
-  - Emit `TranscriptReadyEvent` and `JobStatusChangedEvent` (`Processing → Completed`).
+  - Persist glossary feedback to `GlossaryStatsStore` and embed latest stats within transcript metadata.
+  - Emit `TranscriptReadyEvent` (including `promptHash`) and `JobStatusChangedEvent` (`Processing → Completed`).
   - Capture metrics (`LLMMetrics`) and log `transcription.llm.completed`.
 
 #### Failure Handling
@@ -49,13 +50,16 @@ Worker that consumes `ProcessingJob` messages, orchestrates Gemini transcription
 - `SubscriberLayer` – typed Pub/Sub consumer.
 - `GeminiClientLayer` – wraps streaming API with metrics collection.
 - `TranscriptStoreLayer` – ensures atomic writes.
+- `PromptBuilderLayer` – constructs preamble from `PromptContext` (spec 02).
+- `MetadataEnhancerLayer` – merges video metadata, prompt metadata, and topic hints prior to prompt assembly.
+- `GlossaryStatsStoreLayer` – captures verification feedback loops.
 - `MetricsLayer`, `LoggerLayer`, `ConfigLayer` (ack deadlines, concurrency limit).
 - `SpeakerRoleRegistryLayer` – shared with ingestion for consistent host/guest mapping.
 
 #### Telemetry
 
-- Logs: `transcription.job.starting`, `transcription.llm.retrying`, `transcription.job.completed`, `transcription.job.failed`.
-- Metrics: `transcription_jobs_inflight`, `transcription_duration_ms`, `transcription_failures_total{reason}`.
+- Logs: `transcription.job.starting`, `transcription.llm.retrying`, `transcription.job.completed`, `transcription.job.failed`, `metadata.inference.used`, `metadata.override.applied`.
+- Metrics: `transcription_jobs_inflight`, `transcription_duration_ms`, `transcription_failures_total{reason}`, `metadata.inference_used_total`, `metadata.override_rate`.
 
 #### Outputs
 

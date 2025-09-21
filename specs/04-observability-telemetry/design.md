@@ -10,10 +10,12 @@ Unified logging, metrics, and (optional) tracing with correlation ID propagation
 - `metrics/Registry` — counters and histograms; pluggable sink (stdout/local, Cloud Monitoring later).
 - `status/Publisher` — publishes `JobStatusChangedEvent`.
 - `http/Health` — `/health/live`, `/health/ready`.
+- `metadata/Events` — emits `MetadataAppliedEvent` metrics stream.
+- `status/Gateway` — optional SSE service bridging Pub/Sub to clients.
 
 #### Layers
 
-- `LoggerLayer`, `MetricsLayer`, `StatusPublisherLayer`, `ConfigLayer`, `ClockLayer`.
+- `LoggerLayer`, `MetricsLayer`, `StatusPublisherLayer`, `MetadataEventsLayer`, `ConfigLayer`, `ClockLayer`.
 
 #### Correlation & Tracing
 

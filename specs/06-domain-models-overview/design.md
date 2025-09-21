@@ -8,11 +8,12 @@
 
 - `ids.ts` — branded IDs and decoders: `VideoId`, `JobId(v7)`, `TranscriptId(v4)`, `UserId`.
 - `status.ts` — `JobStatus` union, transition helpers.
-- `entities/` — `VideoMetadata`, `ProcessingJob`, `SpeakerRole`, `SpeakerTurn`, `Transcript`, `TranscriptSummary`.
+- `entities/` — `VideoMetadata`, `ProcessingJob`, `SpeakerRole`, `SpeakerTurn`, `Transcript`, `TranscriptSummary`, `PromptMetadata`, `PromptContext`.
 - `metrics.ts` — `LLMMetrics`, `LLMCall`.
 - `validation.ts` — invariant checks and combinators.
 - `errors.ts` — `Data.TaggedError` types and union `DomainError`.
-- `events.ts` — domain events and codecs.
+- `events.ts` — domain events and codecs (including metadata/prompt events).
+- `topics.ts` — `TopicTag`, `VocabHints`, `ChannelTopicModel`, `GlossaryStats` helpers.
 
 #### Design Notes
 

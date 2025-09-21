@@ -32,6 +32,27 @@ Define a closed union for `JobStatus`:
 
 State transitions are linear: `Queued → MetadataFetched → Processing → Completed|Failed|Cancelled`. Retrying a `Failed` job issues a new `JobId`; retries attach previous failure in the new job’s `relatedFailures` array.
 
+#### Prompt & Topic Metadata
+
+- **PromptMetadata**
+  - Fields: `show`, `speakers`, `audio`, `structure`, `vocabulary`, `fallback`, each typed with nested structs mirroring spec 02 requirements.
+  - Provide `PromptMetadata.Schema` with version tag (`"1.0.0"`) and `PromptMetadata.decodeUnknown` helper returning `Effect.Effect<PromptMetadata, DomainError>`.
+  - Guard optional attributes (gender, pronouns) behind explicit `confidence` flags to avoid unverified data.
+
+- **PromptContext**
+  - Derived struct composed of `promptMetadata`, `videoMetadata`, `topicHints`, and `preambleHash`.
+  - Expose `PromptContext.build` (pure) that merges stored metadata, heuristics, and defaults.
+
+- **Topic Models**
+  - `TopicTag` – `{ tag: string; score: number }` with score ≥ 0 and string length ≤ 48.
+  - `VocabHints` – `{ canonical: ReadonlyArray<string>; aliases: ReadonlyRecord<string, string> }` ensuring canonical entries are unique.
+  - `ChannelTopicModel` – `{ channelId: string; updatedAt: Schema.Date; tags: ReadonlyArray<TopicTag>; vocab: VocabHints; sampleSize: number; hash: string }`.
+  - Provide codecs so ingestion/transcription/persistence share the same validation.
+
+- **GlossaryStats**
+  - Captures verification pass feedback: `{ term: string; seen: number; corrected: number; lastCorrectedAt?: Schema.Date }`.
+  - Stored alongside transcripts for prompt refinement.
+
 #### Core Entities
 
 - **VideoMetadata**
@@ -39,19 +60,20 @@ State transitions are linear: `Queued → MetadataFetched → Processing → Com
   - Invariants: `durationSeconds > 0`; `publishedAt` cannot be more than 24 hours in the future when validated.
 
 - **ProcessingJob**
-  - Fields: `jobId`, `videoId`, `userId`, `submittedAt` (`Schema.Date`), `status: JobStatus`, `dedupeKey` (stable hash of `videoId`), `attempts` (non-negative int), `metadataSnapshot?`, `lastError?`, `relatedFailures: ReadonlyArray<DomainError>`, `version: "1.0.0"`.
-  - Provide `ProcessingJob.create` that enforces `dedupeKey` derivation and initialises `status` to `Queued`.
+  - Fields: `jobId`, `videoId`, `userId`, `submittedAt` (`Schema.Date`), `status: JobStatus`, `dedupeKey` (stable hash of `videoId`), `attempts` (non-negative int), `metadataSnapshot?: PromptMetadata`, `topicHints?: ChannelTopicModel`, `preambleHash?: string`, `lastError?`, `relatedFailures: ReadonlyArray<DomainError>`, `version: "1.0.0"`.
+  - Provide `ProcessingJob.create` that enforces `dedupeKey` derivation, normalises metadata snapshot to canonical schema, and initialises `status` to `Queued`.
 
 - **SpeakerRole**
-  - Enum: `"Host" | "Guest"`. This allows explicit speaker identification before transcription begins.
-  - Provide helpers: `SpeakerRole.fromIdentity(userInput)` and `SpeakerRole.isHost/Guest`.
+  - Enum: `"HOST" | "GUEST"`. This casing matches prompt/pipeline expectations.
+  - Provide helpers: `SpeakerRole.fromInput(userInput)` (case-insensitive) and `SpeakerRole.isHost/Guest`.
+  - Include `SpeakerRole.label` to render human-friendly strings when needed.
 
 - **SpeakerTurn**
   - Fields: `speaker: SpeakerRole`, `startSeconds`, `endSeconds` (non-negative numbers); `text` (trimmed string); `confidence` (0.6–1 range).
   - Invariants: `startSeconds < endSeconds`; no overlaps across the transcript; contiguous turns alternate speaker role when both present.
 
 - **Transcript**
-  - Fields: `transcriptId`, `jobId`, `videoId`, `turns: ReadonlyArray<SpeakerTurn> (min length 1)`, `summary?`, `metrics`, `generatedAt` (`Schema.Date`), `version: "1.0.0"`.
+  - Fields: `transcriptId`, `jobId`, `videoId`, `turns: ReadonlyArray<SpeakerTurn> (min length 1)`, `summary?`, `metrics`, `generatedAt` (`Schema.Date`), `metadata?: PromptContext`, `glossaryStats?: ReadonlyArray<GlossaryStats>`, `version: "1.0.0"`.
   - Provide derived combinators: `Transcript.duration` (max end time), `Transcript.primaryLanguage`.
 
 - **TranscriptSummary**
@@ -84,10 +106,11 @@ Export `DomainError = ValidationError | TranscriptionError | ExternalServiceErro
 
 Publish all inter-service communication through strongly typed events:
 
-- **JobQueuedEvent** `{ job: ProcessingJob }` – emitted post dedupe.
-- **JobStatusChangedEvent** `{ jobId: JobId; previous: JobStatus; next: JobStatus; at: Schema.Date }` – every transition.
-- **TranscriptReadyEvent** `{ jobId: JobId; transcript: Transcript }` – consumed by persistence and notification layers.
-- **JobFailedEvent** `{ jobId: JobId; error: DomainError; attempts: number }`.
+- **JobQueuedEvent** `{ job: ProcessingJob; userId: UserId }` – emitted post dedupe.
+- **JobStatusChangedEvent** `{ jobId: JobId; previous: JobStatus; next: JobStatus; at: Schema.Date; userId: UserId; metadataVersion?: string }` – every transition.
+- **TranscriptReadyEvent** `{ jobId: JobId; transcript: Transcript; promptHash?: string }` – consumed by persistence and notification layers.
+- **JobFailedEvent** `{ jobId: JobId; error: DomainError; attempts: number; userId: UserId }`.
+- **MetadataAppliedEvent** `{ jobId: JobId; metadataHash: string; source: "user" | "inferred"; missingFields: ReadonlyArray<string> }` to feed observability counters.
 
 Each event has a `Codec` that wraps `Schema.encode`/`decode` for Pub/Sub payload safety.
 

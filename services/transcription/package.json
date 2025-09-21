@@ -1,0 +1,26 @@
+{
+  "name": "@puredialog/transcription",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "node --watch dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "effect": "^3.16.16",
+    "@effect/platform": "^0.88.2",
+    "@effect/platform-node": "^0.91.0",
+    "@puredialog/domain": "workspace:*",
+    "@puredialog/gemini": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}

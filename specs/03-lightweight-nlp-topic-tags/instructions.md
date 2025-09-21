@@ -65,6 +65,8 @@ type ChannelTopicModel = {
 };
 ```
 
+Persist via a shared `ChannelTopicModelStore` (Drive/GCS adapter from spec 03 persistence) so results survive process restarts and avoid unnecessary recomputation.
+
 #### Integration Points
 
 - Ingestion (01):
@@ -75,6 +77,8 @@ type ChannelTopicModel = {
 - Metadata Preamble (02):
   - If `vocabHints.canonical` exists, include in the preamble’s "Vocabulary hints" line (bounded by token budget).
   - If `StructureHints` detected, set `show.structure` defaults.
+- Persistence (03):
+  - Store `ChannelTopicModel` artifacts and hashes alongside transcript metadata (see spec 03 storage layout) with versioned filenames (`topics-{channelId}.json`).
 
 #### Performance & Robustness
 
@@ -99,4 +103,3 @@ type ChannelTopicModel = {
 - Noisy channels (varied topics) → lower thresholds; shorten horizon (recent N videos).
 - Non‑English content → language guard; future stopword lists per language.
 - Acronym ambiguity → rely on co‑occurrence boosts and user overrides later.
-

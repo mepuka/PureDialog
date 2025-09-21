@@ -77,28 +77,5 @@ handlers:
     script: auto
     secure: always
     redirect_http_response_code: 301
-
-# Skip files during deployment
-skip_files:
-  - ^(.*/)?#.*#$
-  - ^(.*/)?.*~$
-  - ^(.*/)?.*\.py[co]$
-  - ^(.*/)?.*/RCS/.*$
-  - ^(.*/)?\..*$
-  - ^(.*/)?node_modules/(?!.*\.(js|json)$).*$
-  - ^(.*/)?\.git/.*$
-  - ^(.*/)?\.gitignore$
-  - ^(.*/)?README\.md$
-  - ^(.*/)?\.env\..*$
-  - ^(.*/)?cloudbuild\.yaml$
-  - ^(.*/)?Dockerfile$
-  - ^(.*/)?\.dockerignore$
-  - ^(.*/)?deploy\.sh$
-  - ^(.*/)?setup\.sh$
-  - ^(.*/)?migrate-from-ai-studio\.sh$
-  - ^(.*/)?patterns/.*$
-  - ^(.*/)?\.cursor/.*$
-  - ^(.*/)?AGENTS\.md$
-  - ^(.*/)?CLAUDE\.md$
-  - ^(.*/)?GEMINI\.md$
-  - ^(.*/)?app-structure-diagram\.md$
+# Note: skip_files not supported in nodejs24 runtime
+# File exclusions are handled by .gcloudignore instead

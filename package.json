@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "setup": "bash setup.sh",
     "deploy": "bash deploy.sh",
+    "deploy:appengine": "gcloud app deploy app.yaml --quiet",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.js,.mjs",
     "lint:fix": "eslint . --ext .ts,.js,.mjs --fix"

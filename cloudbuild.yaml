@@ -1,73 +1,28 @@
-# Google Cloud Build configuration for Cloud Run deployment
+# Google Cloud Build configuration for App Engine Standard deployment
 steps:
-  # Build the container image
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      - "build"
-      - "-t"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
-      - "."
-    id: "build-image"
+  # Install dependencies
+  - name: "gcr.io/cloud-builders/npm"
+    args: ["install"]
+    id: "install-dependencies"
 
-  # Push the container image to Artifact Registry
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      - "push"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
-    id: "push-image"
+  # Build the application
+  - name: "gcr.io/cloud-builders/npm"
+    args: ["run", "build"]
+    id: "build-app"
 
-  # Deploy to Cloud Run with secure configuration
+  # Deploy to App Engine
   - name: "gcr.io/cloud-builders/gcloud"
     args:
-      - "run"
+      - "app"
       - "deploy"
-      - "${_SERVICE_NAME}"
-      - "--image"
-      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/pure-dialog:latest"
-      - "--region"
-      - "${_REGION}"
-      - "--platform"
-      - "managed"
-      - "--allow-unauthenticated"
-      - "--port"
-      - "8080"
-      - "--memory"
-      - "2Gi"
-      - "--cpu"
-      - "2"
-      - "--max-instances"
-      - "10"
-      - "--min-instances"
-      - "0"
-      - "--concurrency"
-      - "80"
-      - "--timeout"
-      - "300"
-      - "--service-account"
-      - "${_SERVICE_ACCOUNT}"
-      - "--set-env-vars"
-      - "NODE_ENV=production"
-      - "--set-secrets"
-      - "GEMINI_API_KEY=gemini-api-key:latest"
-      - "VITE_GEMINI_API_KEY=gemini-api-key:latest"
-    id: "deploy-service"
+      - "app.yaml"
+      - "--quiet"
+      - "--promote"
+    id: "deploy-app"
 
-  # Allow unauthenticated access
-  - name: "gcr.io/cloud-builders/gcloud"
-    args:
-      - "run"
-      - "services"
-      - "add-iam-policy-binding"
-      - "${_SERVICE_NAME}"
-      - "--member=allUsers"
-      - "--role=roles/run.invoker"
-      - "--region=${_REGION}"
-    id: "allow-unauthenticated"
-
-# Substitution variables
+# Substitution variables (kept for compatibility)
 substitutions:
   _REGION: "us-west1"
-  _REPOSITORY: "pure-dialog-repo"
   _SERVICE_NAME: "pure-dialog"
   _SERVICE_ACCOUNT: "pure-dialog-sa@gen-lang-client-0874846742.iam.gserviceaccount.com"
 

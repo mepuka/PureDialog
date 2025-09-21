@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Cloud Run deployment script for PureDialog
+# App Engine Standard deployment script for PureDialog
 # Make sure you have the Google Cloud CLI installed and authenticated
 
 set -e
@@ -9,10 +9,9 @@ set -e
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-gen-lang-client-0874846742}"
 REGION="${GOOGLE_CLOUD_REGION:-us-west1}"
 SERVICE_NAME="${SERVICE_NAME:-pure-dialog}"
-REPOSITORY="pure-dialog-repo"
 SERVICE_ACCOUNT="${SERVICE_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "🚀 Deploying PureDialog to Cloud Run..."
+echo "🚀 Deploying PureDialog to App Engine Standard..."
 echo "Project: $PROJECT_ID"
 echo "Region: $REGION"
 echo "Service: $SERVICE_NAME"
@@ -43,32 +42,21 @@ fi
 # Enable required APIs (idempotent)
 echo "📋 Ensuring required APIs are enabled..."
 gcloud services enable cloudbuild.googleapis.com --project=$PROJECT_ID --quiet
-gcloud services enable run.googleapis.com --project=$PROJECT_ID --quiet
-gcloud services enable artifactregistry.googleapis.com --project=$PROJECT_ID --quiet
+gcloud services enable appengine.googleapis.com --project=$PROJECT_ID --quiet
 
-# Create Artifact Registry repository if it doesn't exist
-echo "📦 Setting up Artifact Registry..."
-gcloud artifacts repositories create $REPOSITORY \
-    --repository-format=docker \
-    --location=$REGION \
-    --project=$PROJECT_ID \
-    --quiet || echo "Repository already exists"
-
-# Configure Docker to use gcloud as a credential helper
-gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+# Create App Engine application if it doesn't exist
+echo "🏗️ Setting up App Engine application..."
+gcloud app create --region=$REGION --project=$PROJECT_ID --quiet || echo "App Engine application already exists"
 
 # Build and deploy using Cloud Build
 echo "🏗️ Building and deploying with secure configuration..."
 gcloud builds submit \
     --config cloudbuild.yaml \
-    --substitutions _REGION=$REGION,_REPOSITORY=$REPOSITORY,_SERVICE_NAME=$SERVICE_NAME,_SERVICE_ACCOUNT=$SERVICE_ACCOUNT \
+    --substitutions _REGION=$REGION,_SERVICE_NAME=$SERVICE_NAME,_SERVICE_ACCOUNT=$SERVICE_ACCOUNT \
     --project=$PROJECT_ID
 
 # Get the service URL
-SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \
-    --region=$REGION \
-    --project=$PROJECT_ID \
-    --format="value(status.url)")
+SERVICE_URL="https://${PROJECT_ID}.appspot.com"
 
 echo "✅ Deployment complete!"
 echo "🌐 Service URL: $SERVICE_URL"
@@ -76,7 +64,7 @@ echo ""
 echo "🔐 Security features enabled:"
 echo "  - API key retrieved from Secret Manager"
 echo "  - Dedicated service account with minimal permissions"
-echo "  - No sensitive data in container environment"
+echo "  - App Engine Standard runtime security"
 echo ""
 echo "🧪 Test your deployment:"
 echo "  curl -I $SERVICE_URL/health"

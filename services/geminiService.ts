@@ -1,5 +1,5 @@
 import { GoogleGenAI, MediaResolution, Type } from "@google/genai";
-import type { Transcript, UsageMetadata, SpeakerConfig } from '../types';
+import type { Transcript, UsageMetadata, SpeakerConfig } from "../types";
 
 /**
  * Constructs a SOTA (State-Of-The-Art) prompt for generating a high-quality,
@@ -8,8 +8,10 @@ import type { Transcript, UsageMetadata, SpeakerConfig } from '../types';
  * @returns A detailed system instruction string for the Gemini model.
  */
 const getTranscriptionPrompt = (speakers: SpeakerConfig[]): string => {
-  const speakerList = speakers.map(s => `'${s.name}'`).join(', ');
-  const speakerDescriptions = speakers.map(s => `- **${s.name}:** ${s.description}`).join('\n');
+  const speakerList = speakers.map((s) => `'${s.name}'`).join(", ");
+  const speakerDescriptions = speakers
+    .map((s) => `- **${s.name}:** ${s.description}`)
+    .join("\n");
 
   return `
 You are a world-class transcription engine specializing in generating human-level, production-quality transcripts from video content. Your task is to analyze the provided video and produce a transcript that is not only accurate but also perfectly formatted and easy to read.
@@ -64,7 +66,7 @@ Before generating the final JSON output, follow these steps internally:
  * @returns A JSON schema object.
  */
 const getTranscriptSchema = (speakers: SpeakerConfig[]) => {
-  const speakerNames = speakers.map(s => s.name);
+  const speakerNames = speakers.map((s) => s.name);
 
   return {
     type: Type.ARRAY,
@@ -73,20 +75,22 @@ const getTranscriptSchema = (speakers: SpeakerConfig[]) => {
       properties: {
         timestamp: {
           type: Type.STRING,
-          description: 'Timestamp of the dialogue in MM:SS format.'
+          description: "Timestamp of the dialogue in MM:SS format.",
         },
         speaker: {
           type: Type.STRING,
           enum: speakerNames,
-          description: 'The identified speaker. Must be one of the provided names.'
+          description:
+            "The identified speaker. Must be one of the provided names.",
         },
         dialogue: {
           type: Type.STRING,
-          description: 'The verbatim transcribed text for this segment. Should include filler words.'
-        }
+          description:
+            "The verbatim transcribed text for this segment. Should include filler words.",
+        },
       },
-      required: ['timestamp', 'speaker', 'dialogue'],
-    }
+      required: ["timestamp", "speaker", "dialogue"],
+    },
   };
 };
 
@@ -102,40 +106,44 @@ export const transcribeVideo = async (
   videoUrl: string,
   speakers: SpeakerConfig[],
   onChunk: (accumulatedText: string) => void,
-  signal: AbortSignal,
+  signal: AbortSignal
 ): Promise<{ transcript: Transcript; metadata?: UsageMetadata }> => {
-  if (!process.env.API_KEY) {
-    throw new Error("The API_KEY environment variable is not set. Please configure it to use the application.");
+  // Try GEMINI_API_KEY first (standard), then API_KEY (legacy)
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "The GEMINI_API_KEY environment variable is not set. Please configure it to use the application."
+    );
   }
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   const videoPart = {
     fileData: {
       // MimeType is not required for YouTube URLs; the service infers it.
       fileUri: videoUrl,
-    }
+    },
   };
 
   console.log(`Initiating streaming transcription for: ${videoUrl}`);
 
   const responseStream = await ai.models.generateContentStream({
-    model: 'gemini-2.5-flash',
+    model: "gemini-2.5-flash",
     contents: [{ parts: [videoPart] }],
     config: {
-      responseMimeType: 'application/json',
+      responseMimeType: "application/json",
       responseSchema: getTranscriptSchema(speakers),
       mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
       temperature: 0.0,
       systemInstruction: getTranscriptionPrompt(speakers),
     },
   });
-  
-  let accumulatedJson = '';
+
+  let accumulatedJson = "";
   let usageMetadata: UsageMetadata | undefined;
   for await (const chunk of responseStream) {
     if (signal.aborted) {
-      console.log('Transcription cancelled by user signal.');
-      throw new Error('Transcription was cancelled.');
+      console.log("Transcription cancelled by user signal.");
+      throw new Error("Transcription was cancelled.");
     }
 
     const textPart = chunk.text;
@@ -147,15 +155,17 @@ export const transcribeVideo = async (
       usageMetadata = chunk.usageMetadata;
     }
   }
-  
-  console.log('API Usage Metadata:', usageMetadata);
+
+  console.log("API Usage Metadata:", usageMetadata);
 
   const finalJsonStr = accumulatedJson.trim();
 
   // Basic validation to ensure the response looks like a JSON array.
-  if (!finalJsonStr.startsWith('[') || !finalJsonStr.endsWith(']')) {
+  if (!finalJsonStr.startsWith("[") || !finalJsonStr.endsWith("]")) {
     console.error("Received non-JSON response from API stream:", finalJsonStr);
-    throw new Error("Failed to get a valid transcript. The API response was not in the expected JSON format.");
+    throw new Error(
+      "Failed to get a valid transcript. The API response was not in the expected JSON format."
+    );
   }
 
   try {
@@ -163,6 +173,8 @@ export const transcribeVideo = async (
     return { transcript: result as Transcript, metadata: usageMetadata };
   } catch (e) {
     console.error("Failed to parse final JSON response:", finalJsonStr, e);
-    throw new Error("There was an issue decoding the final transcript from the API stream.");
+    throw new Error(
+      "There was an issue decoding the final transcript from the API stream."
+    );
   }
 };

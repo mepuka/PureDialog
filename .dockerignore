@@ -1,0 +1,57 @@
+# Dependencies
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment files (keep them out of container)
+.env
+.env.*
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Documentation
+README.md
+docs/
+
+# Development files
+.editorconfig
+.eslintrc*
+.prettierrc*
+
+# Deployment files (not needed in container)
+cloudbuild.yaml
+deploy.sh
+migrate-from-ai-studio.sh
+setup.sh
+Dockerfile
+.dockerignore
+
+# Templates
+env.template
+env.example

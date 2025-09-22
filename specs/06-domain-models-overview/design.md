@@ -12,8 +12,7 @@
 - `metrics.ts` — `LLMMetrics`, `LLMCall`.
 - `validation.ts` — invariant checks and combinators.
 - `errors.ts` — `Data.TaggedError` types and union `DomainError`.
-- `events.ts` — domain events and codecs (including metadata/prompt events).
-- `topics.ts` — `TopicTag`, `VocabHints`, `ChannelTopicModel`, `GlossaryStats` helpers.
+- `events.ts` — domain events and codecs (metadata/prompt events only; omit topic modeling).
 
 #### Design Notes
 

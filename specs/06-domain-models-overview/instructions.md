@@ -32,58 +32,57 @@ Define a closed union for `JobStatus`:
 
 State transitions are linear: `Queued → MetadataFetched → Processing → Completed|Failed|Cancelled`. Retrying a `Failed` job issues a new `JobId`; retries attach previous failure in the new job’s `relatedFailures` array.
 
-#### Prompt & Topic Metadata
+#### Prompt Metadata (no topic modeling in MVP)
 
 - **PromptMetadata**
+
   - Fields: `show`, `speakers`, `audio`, `structure`, `vocabulary`, `fallback`, each typed with nested structs mirroring spec 02 requirements.
   - Provide `PromptMetadata.Schema` with version tag (`"1.0.0"`) and `PromptMetadata.decodeUnknown` helper returning `Effect.Effect<PromptMetadata, DomainError>`.
   - Guard optional attributes (gender, pronouns) behind explicit `confidence` flags to avoid unverified data.
 
 - **PromptContext**
-  - Derived struct composed of `promptMetadata`, `videoMetadata`, `topicHints`, and `preambleHash`.
-  - Expose `PromptContext.build` (pure) that merges stored metadata, heuristics, and defaults.
-
-- **Topic Models**
-  - `TopicTag` – `{ tag: string; score: number }` with score ≥ 0 and string length ≤ 48.
-  - `VocabHints` – `{ canonical: ReadonlyArray<string>; aliases: ReadonlyRecord<string, string> }` ensuring canonical entries are unique.
-  - `ChannelTopicModel` – `{ channelId: string; updatedAt: Schema.Date; tags: ReadonlyArray<TopicTag>; vocab: VocabHints; sampleSize: number; hash: string }`.
-  - Provide codecs so ingestion/transcription/persistence share the same validation.
-
-- **GlossaryStats**
-  - Captures verification pass feedback: `{ term: string; seen: number; corrected: number; lastCorrectedAt?: Schema.Date }`.
-  - Stored alongside transcripts for prompt refinement.
+  - Derived struct composed of `promptMetadata` and `videoMetadata`, plus `preambleHash`.
+  - Expose `PromptContext.build` (pure) that merges stored metadata and defaults.
 
 #### Core Entities
 
 - **VideoMetadata**
-  - Fields: `videoId`, `title`, `channelName`, `durationSeconds` (positive int), `publishedAt` (`Schema.Date`), `thumbnailUrl`, `language` (BCP-47 tag), `captionsAvailable` (boolean).
-  - Invariants: `durationSeconds > 0`; `publishedAt` cannot be more than 24 hours in the future when validated.
+
+  - Fields: `videoId`, `title`, `channelName`, `durationSeconds` (positive int), `publishedAt` (`Schema.Date`), `thumbnailUrl`, `language` (BCP-47 tag), `captionsAvailable` (boolean), `description`, `links: ReadonlyArray<string>`, `basicKeywords?: ReadonlyArray<string>`.
+  - Invariants: `durationSeconds > 0`; `publishedAt` cannot be more than 24 hours in the future when validated; `links` must be valid URLs.
 
 - **ProcessingJob**
-  - Fields: `jobId`, `videoId`, `userId`, `submittedAt` (`Schema.Date`), `status: JobStatus`, `dedupeKey` (stable hash of `videoId`), `attempts` (non-negative int), `metadataSnapshot?: PromptMetadata`, `topicHints?: ChannelTopicModel`, `preambleHash?: string`, `lastError?`, `relatedFailures: ReadonlyArray<DomainError>`, `version: "1.0.0"`.
+
+  - Fields: `jobId`, `videoId`, `userId`, `submittedAt` (`Schema.Date`), `status: JobStatus`, `dedupeKey` (stable hash of `videoId`), `attempts` (non-negative int), `metadataSnapshot?: PromptMetadata`, `preambleHash?: string`, `lastError?`, `relatedFailures: ReadonlyArray<DomainError>`, `version: "1.0.0"`.
   - Provide `ProcessingJob.create` that enforces `dedupeKey` derivation, normalises metadata snapshot to canonical schema, and initialises `status` to `Queued`.
 
 - **SpeakerRole**
+
   - Enum: `"HOST" | "GUEST"`. This casing matches prompt/pipeline expectations.
   - Provide helpers: `SpeakerRole.fromInput(userInput)` (case-insensitive) and `SpeakerRole.isHost/Guest`.
   - Include `SpeakerRole.label` to render human-friendly strings when needed.
 
 - **SpeakerTurn**
+
   - Fields: `speaker: SpeakerRole`, `startSeconds`, `endSeconds` (non-negative numbers); `text` (trimmed string); `confidence` (0.6–1 range).
   - Invariants: `startSeconds < endSeconds`; no overlaps across the transcript; contiguous turns alternate speaker role when both present.
 
 - **Transcript**
-  - Fields: `transcriptId`, `jobId`, `videoId`, `turns: ReadonlyArray<SpeakerTurn> (min length 1)`, `summary?`, `metrics`, `generatedAt` (`Schema.Date`), `metadata?: PromptContext`, `glossaryStats?: ReadonlyArray<GlossaryStats>`, `version: "1.0.0"`.
+
+  - Fields: `transcriptId`, `jobId`, `videoId`, `turns: ReadonlyArray<SpeakerTurn> (min length 1)`, `summary?`, `metrics`, `generatedAt` (`Schema.Date`), `version: "1.0.0"`, `promptHash?`.
   - Provide derived combinators: `Transcript.duration` (max end time), `Transcript.primaryLanguage`.
 
 - **TranscriptSummary**
+
   - Fields: `highlights: ReadonlyArray<string> (max 5)`, `keyMoments: ReadonlyArray<{ label: string; atSeconds: number }>` (sorted ascending), `tone: Schema.String`.
 
 - **LLMMetrics**
+
   - Fields: `model`, `promptTokens`, `completionTokens`, `totalTokens`, `costUsd` (Schema.Number.pipe(Schema.nonNegative))`, `durationMs`.
   - Make `totalTokens` a computed field validated against prompt + completion totals.
 
 - **LLMCall**
+
   - Fields: `requestId` (`Schema.UUID`), `model`, `startedAt`, `completedAt`, `statusCode` (int), `metrics: LLMMetrics`.
   - Invariants: `completedAt >= startedAt`; `metrics.durationMs` consistent with timestamp delta.
 

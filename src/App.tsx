@@ -1,23 +1,17 @@
-import React, { useState, useCallback, useMemo } from "react";
-import type {
-  Transcript,
-  UsageMetadata,
-  VideoJob,
-  SpeakerConfig,
-  TranscriptEntry,
-} from "./types";
-import { extractYouTubeLinks } from "./utils/youtube";
-import { transcribeVideo } from "./services/geminiService";
+import React, { useCallback, useMemo, useState } from "react";
 import { Header } from "./components/Header";
+import { ErrorIcon } from "./components/icons/ErrorIcon";
 import { Loader } from "./components/Loader";
+import { Settings } from "./components/Settings";
 import { TranscriptView } from "./components/TranscriptView";
 import { VideoQueue } from "./components/VideoQueue";
-import { ErrorIcon } from "./components/icons/ErrorIcon";
-import { Settings } from "./components/Settings";
+import { transcribeVideo } from "./services/geminiService";
+import type { SpeakerConfig, Transcript, TranscriptEntry, UsageMetadata, VideoJob } from "./types";
+import { extractYouTubeLinks } from "./utils/youtube";
 
 const getYouTubeVideoId = (url: string): string | null => {
   const match = url.match(
-    /(?:[?&]v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    /(?:[?&]v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
   );
   return match ? match[1] : null;
 };
@@ -29,7 +23,7 @@ const getYouTubeVideoId = (url: string): string | null => {
  * @returns The parsed object or null if no complete object is found.
  */
 const extractLastCompleteObject = (
-  jsonString: string
+  jsonString: string,
 ): TranscriptEntry | null => {
   // Find the last closing brace. If there's none, there's no object.
   const lastBraceIndex = jsonString.lastIndexOf("}");
@@ -61,9 +55,9 @@ const extractLastCompleteObject = (
       const parsed = JSON.parse(objectStr);
       // A simple check to see if it resembles our TranscriptEntry type.
       if (
-        parsed &&
-        typeof parsed.speaker === "string" &&
-        typeof parsed.dialogue === "string"
+        parsed
+        && typeof parsed.speaker === "string"
+        && typeof parsed.dialogue === "string"
       ) {
         return parsed as TranscriptEntry;
       }
@@ -80,20 +74,17 @@ const App: React.FC = () => {
   const [textInput, setTextInput] = useState("");
   const [videoJobs, setVideoJobs] = useState<VideoJob[]>([]);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [speakers, setSpeakers] = useState<SpeakerConfig[]>([
     {
       id: crypto.randomUUID(),
       name: "Host",
-      description:
-        "Typically introduces the show and directs the conversation.",
+      description: "Typically introduces the show and directs the conversation.",
     },
     {
       id: crypto.randomUUID(),
       name: "Guest",
-      description:
-        "The person being interviewed or participating in the discussion.",
+      description: "The person being interviewed or participating in the discussion.",
     },
   ]);
 
@@ -134,12 +125,12 @@ const App: React.FC = () => {
         prev.map((job) =>
           job.id === videoId
             ? {
-                ...job,
-                status: "transcribing",
-                error: undefined,
-                streamingTimestamp: null,
-                streamingSnippet: null,
-              }
+              ...job,
+              status: "transcribing",
+              error: undefined,
+              streamingTimestamp: null,
+              streamingSnippet: null,
+            }
             : job
         )
       );
@@ -156,10 +147,10 @@ const App: React.FC = () => {
             prev.map((job) =>
               job.id === videoId
                 ? {
-                    ...job,
-                    streamingTimestamp: lastEntry.timestamp,
-                    streamingSnippet: lastEntry.dialogue,
-                  }
+                  ...job,
+                  streamingTimestamp: lastEntry.timestamp,
+                  streamingSnippet: lastEntry.dialogue,
+                }
                 : job
             )
           );
@@ -171,27 +162,26 @@ const App: React.FC = () => {
           videoUrl,
           speakers,
           handleStreamChunk,
-          controller.signal
+          controller.signal,
         );
         setVideoJobs((prev) =>
           prev.map((job) =>
             job.id === videoId
               ? {
-                  ...job,
-                  status: "completed",
-                  transcript: result,
-                  metadata,
-                  streamingTimestamp: null,
-                  streamingSnippet: null,
-                }
+                ...job,
+                status: "completed",
+                transcript: result,
+                metadata,
+                streamingTimestamp: null,
+                streamingSnippet: null,
+              }
               : job
           )
         );
       } catch (err) {
         console.error("Transcription failed:", err);
-        const isCancellation =
-          err instanceof Error &&
-          err.message === "Transcription was cancelled.";
+        const isCancellation = err instanceof Error
+          && err.message === "Transcription was cancelled.";
         const errorMessage = isCancellation
           ? "Cancelled by user."
           : err instanceof Error
@@ -201,12 +191,12 @@ const App: React.FC = () => {
           prev.map((job) =>
             job.id === videoId && job.status === "transcribing"
               ? {
-                  ...job,
-                  status: "failed",
-                  error: errorMessage,
-                  streamingTimestamp: null,
-                  streamingSnippet: null,
-                }
+                ...job,
+                status: "failed",
+                error: errorMessage,
+                streamingTimestamp: null,
+                streamingSnippet: null,
+              }
               : job
           )
         );
@@ -214,7 +204,7 @@ const App: React.FC = () => {
         setAbortController(null);
       }
     },
-    [abortController, speakers]
+    [abortController, speakers],
   );
 
   const handleCancelTranscription = useCallback(
@@ -222,7 +212,7 @@ const App: React.FC = () => {
       console.log(`Requesting cancellation for job: ${videoId}`);
       abortController?.abort();
     },
-    [abortController]
+    [abortController],
   );
 
   const handleViewTranscript = (videoId: string) => {
@@ -257,25 +247,23 @@ const App: React.FC = () => {
               <div className="mt-6 p-4 bg-gray-900 rounded-lg w-full max-w-lg mx-auto border border-gray-700">
                 <p className="text-sm text-gray-400">Latest Update</p>
                 <div className="font-mono text-indigo-300 mt-2 text-left animate-pulse">
-                  <span className="font-bold mr-2">{`[${
-                    activeJob.streamingTimestamp || "00:00:00"
-                  }]`}</span>
-                  <span className="text-gray-300 break-words">{`"${
-                    activeJob.streamingSnippet || "..."
-                  }"`}</span>
+                  <span className="font-bold mr-2">{`[${activeJob.streamingTimestamp || "00:00:00"}]`}</span>
+                  <span className="text-gray-300 break-words">{`"${activeJob.streamingSnippet || "..."}"`}</span>
                 </div>
               </div>
             )}
           </div>
         );
       case "completed":
-        return activeJob.transcript ? (
-          <TranscriptView
-            transcript={activeJob.transcript}
-            videoUrl={activeJob.url}
-            metadata={activeJob.metadata || null}
-          />
-        ) : null;
+        return activeJob.transcript
+          ? (
+            <TranscriptView
+              transcript={activeJob.transcript}
+              videoUrl={activeJob.url}
+              metadata={activeJob.metadata || null}
+            />
+          )
+          : null;
       case "failed":
         return (
           <div className="text-center text-red-400 p-4">

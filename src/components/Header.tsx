@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { TranscriptionIcon } from './icons/TranscriptionIcon';
+import React from "react";
+import { TranscriptionIcon } from "./icons/TranscriptionIcon";
 
 export const Header: React.FC = () => {
   return (

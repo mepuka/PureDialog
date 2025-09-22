@@ -12,23 +12,21 @@ Effect worker consuming `ProcessingJob` messages, orchestrating Gemini transcrip
 - `adapters/TranscriptStore` — persistence interface.
 - `adapters/StatusPublisher` — publishes job and transcript events.
 - `core/Validation` — invariants and coherence checks.
-- `adapters/PromptBuilder` — builds preamble from `PromptContext`.
-- `adapters/MetadataEnhancer` — merges video metadata, prompt metadata, and topic hints.
-- `adapters/GlossaryStatsStore` — persists verification feedback for future prompts.
+- `adapters/PromptBuilder` — builds preamble from `PromptContext` (basic metadata only).
 
 #### Layers
 
 - `SubscriberLayer`, `GeminiClientLayer`, `TranscriptStoreLayer`.
-- `PromptBuilderLayer`, `MetadataEnhancerLayer`, `GlossaryStatsStoreLayer`.
+- `PromptBuilderLayer` (uses basic metadata: title, description, channel, duration).
 - `StatusPublisherLayer`, `ConfigLayer`, `LoggerLayer`, `MetricsLayer`, `ClockLayer`.
 
 #### Pipeline
 
 1. Decode job; transition `MetadataFetched → Processing`.
-2. Load speaker roles; fetch/validate latest metadata (≤2% duration delta); build `PromptContext` using enhancer + topic hints.
+2. Load speaker roles; fetch/validate latest metadata (≤2% duration delta); build `PromptContext` from metadata.
 3. Call Gemini with canonical roles and preamble from `PromptBuilder`; accumulate streaming JSON to string.
 4. Decode to `Transcript` via `Schema.decodeUnknownEffect`.
-5. Run `Validation.checkAll(transcript, metadata)` and persist glossary stats.
+5. Run `Validation.checkAll(transcript, metadata)`.
 6. On success: persist transcript, publish `TranscriptReadyEvent` (with `promptHash`), transition to `Completed`.
 7. On failure: publish `JobFailedEvent`, transition to `Failed` (include `metadataVersion`).
 

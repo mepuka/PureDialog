@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "google-cloud-mcp": {
+      "command": "node",
+      "args": ["/Users/pooks/google-cloud-mcp/dist/index.js"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "/Users/pooks/.config/gcloud/application_default_credentials.json"
+      }
+    }
+  }
+}

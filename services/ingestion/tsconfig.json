@@ -1,9 +1,20 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "declaration": true
+    "rootDir": "../../packages/services/ingestion/src",
+    "outDir": "../../packages/services/ingestion/dist",
+    "declaration": true,
+    "moduleResolution": "node",
+    "paths": {
+      "@puredialog/domain": ["../../packages/domain/src/index"],
+      "@puredialog/domain/*": ["../../packages/domain/src/*"],
+      "@effect/schema": [
+        "../../packages/domain/node_modules/@effect/schema/dist/esm/index"
+      ],
+      "@effect/schema/*": [
+        "../../packages/domain/node_modules/@effect/schema/dist/esm/*"
+      ]
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["../../packages/services/ingestion/src/**/*"]
 }

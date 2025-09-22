@@ -11,13 +11,13 @@ Worker that consumes `ProcessingJob`, orchestrates Gemini transcription, validat
   - Decode messages via `ProcessingJobPayloadCodec`.
   - Update status `MetadataFetched → Processing` with `JobStatusChangedEvent`.
 - Processing
-  - Load canonical `SpeakerRoleRegistry` and `VideoMetadata`.
+  - Load canonical `SpeakerRoleRegistry` and `VideoMetadata` (title, description, links, channelId, publishedAt, duration).
   - Enforce duration delta ≤ 2% vs snapshot.
-  - Build `PromptContext` from `PromptMetadata`, `ChannelTopicModel` hints, and latest `VideoMetadata`.
+  - Build `PromptContext` from basic `PromptMetadata` and latest `VideoMetadata`.
   - Call Gemini via `GeminiClient` and `PromptBuilder` with host/guest labels; accumulate JSON stream and track `promptHash`.
   - Decode to `Transcript` via `Schema.decodeUnknownEffect`.
   - Validate invariants (non-overlap, chronology, exactly two speakers, confidence threshold).
-  - Persist transcript, glossary stats, and metrics via `TranscriptStore`/`GlossaryStatsStore`.
+  - Persist transcript and metrics via `TranscriptStore`.
   - Emit `TranscriptReadyEvent` (with `promptHash`) and `JobStatusChangedEvent(Processing → Completed)`.
 
 #### Non-Functional Requirements
@@ -35,14 +35,13 @@ Worker that consumes `ProcessingJob`, orchestrates Gemini transcription, validat
 #### Observability Requirements
 
 - Logs: start, retrying, completed, failed; include `LLMMetrics` summary and metadata source info.
-- Metrics: `transcription_jobs_inflight`, `transcription_duration_ms`, `transcription_failures_total{reason}`, `metadata.inference_used_total`, `metadata.override_rate`.
+- Metrics: `transcription_jobs_inflight`, `transcription_duration_ms`, `transcription_failures_total{reason}`.
 
 #### Acceptance Criteria
 
 - [ ] Subscriber respects concurrency and ack deadlines.
 - [ ] Valid transcripts persist and events publish; invalid ones fail deterministically.
 - [ ] PromptContext builder hashes are recorded and included on `TranscriptReadyEvent`.
-- [ ] Glossary stats persist and feed subsequent runs.
 - [ ] Re-delivery does not create duplicate artifacts.
 
 #### Improvements/Simplifications

@@ -2,7 +2,7 @@
 
 #### Goal
 
-Add fast, deterministic NLP to harvest channel/video metadata and generate topic tags and vocabulary hints with minimal compute and zero LLM calls. Use these hints to improve transcription accuracy and downstream search/UX without complicating the core pipeline.
+Add fast, deterministic NLP to harvest channel/playlist metadata and generate topic tags and vocabulary hints with minimal compute and zero LLM calls. Target use case: run on batches of videos (latest N or playlist) to boost prompt quality and capture expert terminology before transcription.
 
 #### Where It Fits (Spec Cross‑Refs)
 
@@ -12,8 +12,8 @@ Add fast, deterministic NLP to harvest channel/video metadata and generate topic
 
 #### Inputs
 
-- Channel level: title, description, custom tags, about text (if available), list of recent video titles/descriptions/tags.
-- Video level: title, description, YouTube tags.
+- Channel level: title, description, custom tags, about text (if available).
+- Video batch (channel latest N or playlist): list of video `{ title, description, tags, publishedAt }`.
 
 #### Outputs
 
@@ -23,10 +23,17 @@ Add fast, deterministic NLP to harvest channel/video metadata and generate topic
 
 #### Minimal Algorithms (Deterministic, Fast)
 
-1) Candidate extraction (per channel):
-   - Tokenize titles+descriptions (simple Unicode word boundary).
-   - Generate 1–3 gram candidates; lower‑case except for acronym detection.
-   - Filter: remove stopwords, numeric‑only, length < 3, and generic podcast terms (e.g., "episode", "subscribe").
+Pipeline per batch (channel/playlist):
+
+1) Collect metadata for target videos → `Chunk<VideoMeta>` sorted by publish date (newest first).
+2) Candidate extraction over entire batch (see below).
+3) Topic scoring & vocabulary extraction.
+4) Persist `ChannelTopicModel` with batch hash and emit diff vs previous model.
+
+Candidate extraction:
+  - Tokenize titles+descriptions (simple Unicode word boundary).
+  - Generate 1–3 gram candidates; lower‑case except for acronym detection.
+  - Filter: remove stopwords, numeric‑only, length < 3, and generic podcast terms (e.g., "episode", "subscribe").
 
 2) Scoring:
    - TF: frequency across videos (sum of occurrences in titles+descriptions, titles weighted x3).
@@ -70,7 +77,7 @@ Persist via a shared `ChannelTopicModelStore` (Drive/GCS adapter from spec 03 pe
 #### Integration Points
 
 - Ingestion (01):
-  - On first encounter of a channel or when hash changes, compute ChannelTopicModel from the latest N videos (e.g., N=100 configurable; fallback N=20).
+  - On first encounter of a channel or when hash changes, compute ChannelTopicModel from latest N channel videos or a selected playlist (N configurable; fallback N=20).
   - Attach `topicHints` (top 20 tags) and `vocabHints.canonical` to the `ProcessingJob.metadataSnapshot`.
   - Expose `GET /api/v1/channels/:id/topics` for debugging/UX.
 
@@ -89,7 +96,7 @@ Persist via a shared `ChannelTopicModelStore` (Drive/GCS adapter from spec 03 pe
 #### Metrics & Validation
 
 - `nlp.topic_tags_generated_total`, `nlp.vocab_hints_generated_total`.
-- `nlp.channel_model_updates_total` with sampleSize and duration.
+- `nlp.channel_model_updates_total` with sampleSize, duration, and batch type (`channel`, `playlist`).
 - Sanity checks: overlap with YouTube tags ≥ 60% for top 10; stability across weeks (Jaccard ≥ 0.7 for top 20).
 
 #### Rollout

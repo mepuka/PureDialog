@@ -1,6 +1,6 @@
+import effectPlugin from "@effect/eslint-plugin";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
-import effectPlugin from "@effect/eslint-plugin";
 
 export default tseslint.config(
   {
@@ -22,5 +22,5 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-explicit-any": "error",
     },
-  }
+  },
 );

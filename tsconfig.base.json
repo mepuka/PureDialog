@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "strict": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
@@ -14,6 +14,13 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@puredialog/domain": ["packages/domain/src/index"],
+      "@puredialog/domain/*": ["packages/domain/src/*"],
+      "@effect/schema": ["packages/domain/node_modules/@effect/schema/dist/esm/index"],
+      "@effect/schema/*": ["packages/domain/node_modules/@effect/schema/dist/esm/*"],
+      "@effect/schema/Schema": ["packages/domain/node_modules/@effect/schema/dist/esm/Schema"]
+    }
   }
 }

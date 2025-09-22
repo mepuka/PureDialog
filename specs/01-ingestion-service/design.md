@@ -12,7 +12,6 @@ Effect Platform-Node HTTP API that validates requests, resolves speaker roles, d
 - `adapters/PubSubPublisher` — typed publisher using domain event codecs.
 - `adapters/DedupStore` — Drive/GCS or in-memory implementation.
 - `adapters/SpeakerRoleRegistry` — canonical mapping storage.
-- `adapters/ChannelTopicModel` — deterministic NLP enrichment per channel (spec 03).
 
 #### Layers
 
@@ -24,14 +23,13 @@ Effect Platform-Node HTTP API that validates requests, resolves speaker roles, d
 
 1. Decode `{ url, userId, speakers? }`.
 2. `VideoId.fromUrl(url)` via domain decoder.
-3. Resolve `SpeakerRoleRegistry` first, then merge request `metadata` and heuristics; emit `MetadataAppliedEvent` when fields missing.
+3. Resolve `SpeakerRoleRegistry`; merge provided `speakers` when present.
 4. `DedupStore.acquire(videoId, userId)` → existing job? return `{ jobId }`.
-5. `YouTubeClient.fetchMetadata(videoId)`.
-6. `ChannelTopicModel.refreshIfStale(channelId)` and attach hints to job.
-7. `ProcessingJob.create(videoId, userId, metadata, topicHints)`.
-8. Publish job to topic with attributes `{ jobId, videoId, schemaVersion, metadataVersion, userId }`.
-9. Emit `JobStatusChangedEvent (Queued → MetadataFetched)`.
-10. Return `{ jobId }`.
+5. `YouTubeClient.fetchMetadata(videoId)` (title, description, links, publishedAt, duration, channelId, basic keywords if available).
+6. `ProcessingJob.create(videoId, userId, metadata)`.
+7. Publish job to topic with attributes `{ jobId, videoId, schemaVersion, userId }`.
+8. Emit `JobStatusChangedEvent (Queued → MetadataFetched)`.
+9. Return `{ jobId }`.
 
 #### Error Handling
 

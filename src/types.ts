@@ -18,7 +18,7 @@ export interface UsageMetadata {
   totalTokenCount?: number;
 }
 
-export type VideoStatus = 'pending' | 'transcribing' | 'completed' | 'failed';
+export type VideoStatus = "pending" | "transcribing" | "completed" | "failed";
 
 export interface VideoJob {
   id: string; // YouTube Video ID

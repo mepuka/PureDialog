@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 
 export const YouTubeIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg

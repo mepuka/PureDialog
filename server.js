@@ -1,10 +1,10 @@
 import "dotenv/config";
-import http from "http";
 import fs from "fs";
+import http from "http";
 import path from "path";
+import process from "process";
 import url from "url";
 import { fileURLToPath } from "url";
-import process from "process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,7 +61,7 @@ function handleApiRoute(req, res, pathname) {
   if (pathname === "/api/health" || pathname === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
-      JSON.stringify({ status: "healthy", timestamp: new Date().toISOString() })
+      JSON.stringify({ status: "healthy", timestamp: new Date().toISOString() }),
     );
     return;
   }

@@ -8,14 +8,11 @@ Drive-backed (or pluggable) persistence consuming domain events and providing re
 
 - Write Artifacts
   - On `TranscriptReadyEvent`, write `transcript-{transcriptId}.json` under `transcripts/videos/{videoId}/`.
-  - Maintain `metadata.json` snapshot per video (includes `PromptMetadata`, `PromptContext`, `preambleHash`).
+  - Maintain `metadata.json` snapshot per video (title, description, links, publishedAt, duration, channelId, optional basic keywords).
   - Maintain dedupe file `transcripts/.dedup/{dedupeKey}.json` if absent.
-  - Persist `topics.json` per channel when `ChannelTopicModel` hash changes.
-  - Persist `glossary-stats.json` per video when verification data provided.
 - Retrieval
-  - `getByJobId(jobId)` and `getByVideoId(videoId)` return decoded `Transcript` including metadata/glossary stats.
+  - `getByJobId(jobId)` and `getByVideoId(videoId)` return decoded `Transcript`.
   - `getJob(jobId)` returns `ProcessingJob` with latest status timeline.
-  - `getChannelTopics(channelId)` returns cached `ChannelTopicModel` with hash.
 - Failure Archive
   - On `JobFailedEvent`, write failure record `transcripts/.failures/{jobId}.json`.
 
@@ -32,15 +29,14 @@ Drive-backed (or pluggable) persistence consuming domain events and providing re
 
 #### Observability Requirements
 
-- Metrics: `storage_writes_total{artifact}`, `storage_write_duration_ms`, `storage_topics_updates_total`, `storage_glossary_updates_total`.
-- Logs: `persistence.transcript.stored`, `persistence.topics.updated`, `persistence.glossary.updated`, `persistence.failure.archived`.
+- Metrics: `storage_writes_total{artifact}`, `storage_write_duration_ms`.
+- Logs: `persistence.transcript.stored`, `persistence.failure.archived`.
 
 #### Acceptance Criteria
 
-- [ ] Valid events result in correctly placed files with version `1.0.0` (transcript, metadata, topics, glossary).
-- [ ] Retrieval returns schema-validated values for transcripts, jobs, and channel topics.
+- [ ] Valid events result in correctly placed files with version `1.0.0` (transcript, metadata).
+- [ ] Retrieval returns schema-validated values for transcripts and jobs.
 - [ ] Writes are atomic and idempotent.
-- [ ] Hash changes trigger topic/glossary update metrics/logs.
 
 #### Improvements/Simplifications
 

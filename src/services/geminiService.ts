@@ -1,5 +1,5 @@
 import { GoogleGenAI, MediaResolution, Type } from "@google/genai";
-import type { Transcript, UsageMetadata, SpeakerConfig } from "../types";
+import type { SpeakerConfig, Transcript, UsageMetadata } from "../types";
 
 /**
  * Constructs a SOTA (State-Of-The-Art) prompt for generating a high-quality,
@@ -80,13 +80,11 @@ const getTranscriptSchema = (speakers: SpeakerConfig[]) => {
         speaker: {
           type: Type.STRING,
           enum: speakerNames,
-          description:
-            "The identified speaker. Must be one of the provided names.",
+          description: "The identified speaker. Must be one of the provided names.",
         },
         dialogue: {
           type: Type.STRING,
-          description:
-            "The verbatim transcribed text for this segment. Should include filler words.",
+          description: "The verbatim transcribed text for this segment. Should include filler words.",
         },
       },
       required: ["timestamp", "speaker", "dialogue"],
@@ -106,12 +104,12 @@ export const transcribeVideo = async (
   videoUrl: string,
   speakers: SpeakerConfig[],
   onChunk: (accumulatedText: string) => void,
-  signal: AbortSignal
+  signal: AbortSignal,
 ): Promise<{ transcript: Transcript; metadata?: UsageMetadata }> => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "The VITE_GEMINI_API_KEY environment variable is not set. Please configure it to use the application."
+      "The VITE_GEMINI_API_KEY environment variable is not set. Please configure it to use the application.",
     );
   }
   const ai = new GoogleGenAI({ apiKey });
@@ -163,7 +161,7 @@ export const transcribeVideo = async (
   if (!finalJsonStr.startsWith("[") || !finalJsonStr.endsWith("]")) {
     console.error("Received non-JSON response from API stream:", finalJsonStr);
     throw new Error(
-      "Failed to get a valid transcript. The API response was not in the expected JSON format."
+      "Failed to get a valid transcript. The API response was not in the expected JSON format.",
     );
   }
 
@@ -173,7 +171,7 @@ export const transcribeVideo = async (
   } catch (e) {
     console.error("Failed to parse final JSON response:", finalJsonStr, e);
     throw new Error(
-      "There was an issue decoding the final transcript from the API stream."
+      "There was an issue decoding the final transcript from the API stream.",
     );
   }
 };

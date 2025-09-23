@@ -5,7 +5,16 @@ import { YoutubeApiError } from "./errors.js";
 import { makeChannelRequest, makeVideoRequest } from "./internal/requests.js";
 import { decodeChannelResponse, decodeVideoResponse, extractChannels, extractVideos } from "./internal/responses.js";
 import { transformHttpError, withRetry } from "./internal/retry.js";
-import { Channel, ChannelId, extractChannelId, extractVideoId, Video, VideoId } from "./resources.js";
+import {
+  Channel,
+  ChannelId,
+  extractChannelId,
+  extractVideoId,
+  transformChannel,
+  transformVideo,
+  Video,
+  VideoId,
+} from "./resources.js";
 
 export class YoutubeApiClient extends Context.Tag("YoutubeApiClient")<
   YoutubeApiClient,
@@ -56,15 +65,15 @@ const makeYoutubeApiClient = Effect.gen(function*() {
     Effect.gen(function*() {
       const request = makeVideoRequest([id], config);
       const response = yield* executeRequest(request, decodeVideoResponse);
-      const videos = yield* extractVideos(response);
+      const rawVideos = yield* extractVideos(response);
 
-      if (videos.length === 0) {
+      if (rawVideos.length === 0) {
         return yield* Effect.fail(
           YoutubeApiError.apiError(404, `Video not found: ${id}`),
         );
       }
 
-      return videos[0] as Video;
+      return transformVideo(rawVideos[0]);
     });
 
   // Video by URL operation
@@ -93,7 +102,8 @@ const makeYoutubeApiClient = Effect.gen(function*() {
 
       const request = makeVideoRequest(ids, config);
       const response = yield* executeRequest(request, decodeVideoResponse);
-      return yield* extractVideos(response);
+      const rawVideos = yield* extractVideos(response);
+      return rawVideos.map(transformVideo);
     });
 
   // Single channel operation
@@ -101,15 +111,15 @@ const makeYoutubeApiClient = Effect.gen(function*() {
     Effect.gen(function*() {
       const request = makeChannelRequest([id], config);
       const response = yield* executeRequest(request, decodeChannelResponse);
-      const channels = yield* extractChannels(response);
+      const rawChannels = yield* extractChannels(response);
 
-      if (channels.length === 0) {
+      if (rawChannels.length === 0) {
         return yield* Effect.fail(
           YoutubeApiError.apiError(404, `Channel not found: ${id}`),
         );
       }
 
-      return channels[0] as Channel;
+      return transformChannel(rawChannels[0]);
     });
 
   // Channel by URL operation
@@ -141,7 +151,8 @@ const makeYoutubeApiClient = Effect.gen(function*() {
 
       const request = makeChannelRequest(ids, config);
       const response = yield* executeRequest(request, decodeChannelResponse);
-      return yield* extractChannels(response);
+      const rawChannels = yield* extractChannels(response);
+      return rawChannels.map(transformChannel);
     });
 
   return {

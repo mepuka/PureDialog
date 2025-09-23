@@ -1,4 +1,3 @@
-import effectPlugin from "@effect/eslint-plugin";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
@@ -8,7 +7,6 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   tseslint.configs.strict,
-  effectPlugin.configs.dprint,
   {
     languageOptions: {
       parser: tseslint.parser,
@@ -22,5 +20,5 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-explicit-any": "error",
     },
-  },
+  }
 );

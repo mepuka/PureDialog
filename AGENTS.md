@@ -92,6 +92,60 @@
 
 This is the Effect library repository, focusing on functional programming patterns and effect systems in TypeScript.
 
+## 🏗️ Domain Package Architecture
+
+**CRITICAL DOMAIN RULES - NEVER VIOLATE:**
+
+### Domain Package is Canonical
+- **PURPOSE**: The `@puredialog/domain` package contains ALL canonical domain types and schemas
+- **SINGLE SOURCE OF TRUTH**: All application types MUST be defined in domain package
+- **NO EXTERNAL DEPENDENCIES**: Domain package MUST NEVER import third-party SDKs, APIs, or implementation-specific code
+- **CLEAN BOUNDARIES**: Domain represents pure business logic without implementation details
+
+### Forbidden in Domain Package
+- **Google APIs**: Never import `@googleapis/*` packages
+- **YouTube SDK**: Never import YouTube-specific implementation types
+- **Database Libraries**: Never import Prisma, Drizzle, or database-specific types
+- **HTTP Libraries**: Never import axios, fetch, or HTTP client types
+- **External SDKs**: Never import any third-party service SDKs
+
+### Required Domain Patterns
+- **Effect Schema**: All domain types MUST use `@effect/schema` for validation
+- **Branded Types**: Use branded types for type safety (e.g., `YouTubeVideoId`)
+- **Discriminated Unions**: Use `{type: "specific_type", data: schema}` pattern for sum types
+- **Pure Functions**: All domain logic must be pure and side-effect free
+
+### Adapter Pattern for Integration
+- **MANDATORY**: Use adapters to bridge domain and external services
+- **LOCATION**: Adapters live in service packages (e.g., `packages/ingestion/src/adapters/`)
+- **DIRECTION**: Adapters convert FROM external APIs TO domain types and vice versa
+- **ISOLATION**: External API types never leak into domain through adapters
+
+### Example Architecture:
+```typescript
+// ✅ CORRECT - Domain package (packages/domain/src/media-resources.ts)
+export const MediaResource = Schema.Union(
+  Schema.Struct({
+    type: Schema.Literal("youtube"),
+    data: YouTubeVideo  // Clean domain schema
+  })
+);
+
+// ✅ CORRECT - Ingestion adapter (packages/ingestion/src/adapters/youtube-adapter.ts)
+import { youtube_v3 } from "@googleapis/youtube";  // External API types
+import { MediaResource } from "@puredialog/domain";  // Domain types
+
+export const toDomainMediaResource = (
+  apiVideo: youtube_v3.Schema$Video  // External type
+): Effect.Effect<MediaResource, Error> =>  // Domain type
+```
+
+### Enforcement Rules:
+- **CODE REVIEWS**: Check for external imports in domain package
+- **BUILD VALIDATION**: Domain package must compile independently
+- **ARCHITECTURAL TESTS**: Write tests to prevent domain pollution
+- **CLEAR SEPARATION**: If you need external types, create an adapter
+
 ## Development Workflow
 
 ### Core Principles
@@ -186,31 +240,16 @@ pnpm lint --fix <typescript_file.ts>
 - Simplify the approach
 - Ask for guidance rather than guessing
 
-## JSDoc Documentation Enhancement
-
-### Overview
-
-Achieve 100% JSDoc documentation coverage for Effect library modules by adding comprehensive `@example` tags and proper `@category` annotations to all exported functions, types, interfaces, and constants.
-
 ### Critical Requirements
 
 - **CRITICAL REQUIREMENT**: Check that all JSDoc examples compile: `pnpm docgen`
 - This command extracts code examples from JSDoc comments and type-checks them
-- **ABSOLUTELY NEVER COMMIT if docgen fails** - Fix ANY and ALL compilation errors in examples before committing
-- **MANDATORY**: `pnpm docgen` must pass with ZERO errors before any commit
 - **ZERO TOLERANCE**: Even pre-existing errors must be fixed before committing new examples
 - **NEVER remove examples to make docgen pass** - Fix the type issues properly instead
 - Examples should use correct imports and API usage
 - **IMPORTANT**: Only edit `@example` sections in the original source files (e.g., `packages/effect/src/*.ts`)
 - **DO NOT** edit files in the `docs/examples/` folder - these are auto-generated from JSDoc comments
 - **CRITICAL**: When the JSDoc analysis tool reports false positives (missing examples that actually exist), fix the tool in `scripts/analyze-jsdoc.mjs` to correctly detect existing examples
-
-### Finding Missing Documentation
-
-- **For all files**: `node scripts/analyze-jsdoc.mjs`
-- **For specific file**: `node scripts/analyze-jsdoc.mjs --file=FileName.ts`
-- **Example**: `node scripts/analyze-jsdoc.mjs --file=Effect.ts`
-- **Schema files**: `node scripts/analyze-jsdoc.mjs --file=schema/Schema.ts`
 
 ### Documentation Enhancement Strategies
 

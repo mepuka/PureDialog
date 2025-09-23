@@ -177,6 +177,66 @@ importers:
         specifier: ~5.8.2
         version: 5.8.3
 
+  services/api:
+    dependencies:
+      '@effect/platform-node':
+        specifier: ^0.91.0
+        version: 0.91.0(@effect/cluster@0.43.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/workflow@0.5.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@puredialog/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@puredialog/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
+      effect:
+        specifier: ^3.16.16
+        version: 3.17.14
+    devDependencies:
+      typescript:
+        specifier: ~5.8.2
+        version: 5.8.3
+
+  services/worker-metadata:
+    dependencies:
+      '@effect/platform-node':
+        specifier: ^0.91.0
+        version: 0.91.0(@effect/cluster@0.43.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/workflow@0.5.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@puredialog/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@puredialog/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
+      effect:
+        specifier: ^3.16.16
+        version: 3.17.14
+    devDependencies:
+      typescript:
+        specifier: ~5.8.2
+        version: 5.8.3
+
+  services/worker-transcription:
+    dependencies:
+      '@effect/platform-node':
+        specifier: ^0.91.0
+        version: 0.91.0(@effect/cluster@0.43.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/workflow@0.5.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@puredialog/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@puredialog/gemini':
+        specifier: workspace:*
+        version: link:../../packages/gemini
+      '@puredialog/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
+      effect:
+        specifier: ^3.16.16
+        version: 3.17.14
+    devDependencies:
+      typescript:
+        specifier: ~5.8.2
+        version: 5.8.3
+
 packages:
 
   '@alloc/quick-lru@5.2.0':

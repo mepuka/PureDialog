@@ -1,22 +1,18 @@
-/* eslint-disable @effect/dprint */
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
-/**
- * High level configuration surface for the infrastructure stack.
- * These interfaces capture the intent from the architecture plan so
- * subsequent resource definitions can rely on strong typing.
- */
-export interface ServiceConfig {
+interface CloudRunServiceConfig {
   readonly serviceName: string;
-  readonly entrypoint: string;
-  readonly runtime: "nodejs24";
-  readonly instanceClass: string;
-  readonly versionId?: string;
+  readonly image: string;
+  readonly cpu?: string;
+  readonly memory?: string;
+  readonly minInstances?: number;
+  readonly maxInstances?: number;
+  readonly concurrency?: number;
 }
 
-export interface PubSubConfig {
+interface PubSubConfig {
   readonly workTopic: string;
   readonly eventsTopic: string;
   readonly dlqTopic: string;
@@ -25,59 +21,65 @@ export interface PubSubConfig {
   readonly eventsMonitorSubscription: string;
 }
 
-export interface StorageConfig {
+interface StorageConfig {
   readonly bucketBaseName: string;
 }
 
-export interface StackConfig {
+interface StackConfig {
+  readonly project: string;
   readonly region: string;
-  readonly appEngineProject: string;
-  readonly appEngineServiceAccount: string;
+  readonly serviceAccountEmail: string;
   readonly services: {
-    readonly api: ServiceConfig;
-    readonly metadataWorker: ServiceConfig;
-    readonly transcriptionWorker: ServiceConfig;
+    readonly api: CloudRunServiceConfig;
+    readonly metadataWorker: CloudRunServiceConfig;
+    readonly transcriptionWorker: CloudRunServiceConfig;
   };
   readonly pubsub: PubSubConfig;
   readonly storage: StorageConfig;
 }
 
 const gcpConfig = new pulumi.Config("gcp");
-const appEngineConfig = new pulumi.Config("appEngine");
+const cloudRunConfig = new pulumi.Config("cloudrun");
 const pubsubConfig = new pulumi.Config("pubsub");
 const storageConfig = new pulumi.Config("storage");
 
 const defaultStackConfig: StackConfig = {
+  project: gcpConfig.get("project") ?? "gen-lang-client-0874846742",
   region: gcpConfig.get("region") ?? "us-west1",
-  appEngineProject:
-    appEngineConfig.get("project") ??
-    gcpConfig.get("project") ??
-    "gen-lang-client-0874846742",
-  appEngineServiceAccount:
-    appEngineConfig.get("serviceAccount") ??
+  serviceAccountEmail:
+    cloudRunConfig.get("serviceAccount") ??
     "211636922435-compute@developer.gserviceaccount.com",
   services: {
     api: {
-      serviceName: appEngineConfig.get("apiServiceName") ?? "default",
-      entrypoint: "pnpm start",
-      runtime: "nodejs24",
-      instanceClass: appEngineConfig.get("instanceClass") ?? "F2",
-      versionId: appEngineConfig.get("apiVersionId") ?? undefined,
+      serviceName: cloudRunConfig.get("apiServiceName") ?? "api",
+      image: cloudRunConfig.require("apiImage"),
+      cpu: cloudRunConfig.get("apiCpu") ?? "0.25",
+      memory: cloudRunConfig.get("apiMemory") ?? "512Mi",
+      minInstances: cloudRunConfig.getNumber("apiMinInstances") ?? 0,
+      maxInstances: cloudRunConfig.getNumber("apiMaxInstances") ?? 2,
+      concurrency: cloudRunConfig.getNumber("apiConcurrency") ?? 80,
     },
     metadataWorker: {
       serviceName:
-        appEngineConfig.get("metadataServiceName") ?? "worker-metadata",
-      entrypoint: "pnpm start",
-      runtime: "nodejs24",
-      instanceClass: appEngineConfig.get("metadataInstanceClass") ?? "F2",
+        cloudRunConfig.get("metadataServiceName") ?? "worker-metadata",
+      image: cloudRunConfig.require("metadataImage"),
+      cpu: cloudRunConfig.get("metadataCpu") ?? "0.25",
+      memory: cloudRunConfig.get("metadataMemory") ?? "512Mi",
+      minInstances: cloudRunConfig.getNumber("metadataMinInstances") ?? 0,
+      maxInstances: cloudRunConfig.getNumber("metadataMaxInstances") ?? 2,
+      concurrency: cloudRunConfig.getNumber("metadataConcurrency") ?? 10,
     },
     transcriptionWorker: {
       serviceName:
-        appEngineConfig.get("transcriptionServiceName") ??
+        cloudRunConfig.get("transcriptionServiceName") ??
         "worker-transcription",
-      entrypoint: "pnpm start",
-      runtime: "nodejs24",
-      instanceClass: appEngineConfig.get("transcriptionInstanceClass") ?? "F2",
+      image: cloudRunConfig.require("transcriptionImage"),
+      cpu: cloudRunConfig.get("transcriptionCpu") ?? "0.25",
+      memory: cloudRunConfig.get("transcriptionMemory") ?? "512Mi",
+      minInstances: cloudRunConfig.getNumber("transcriptionMinInstances") ?? 0,
+      maxInstances: cloudRunConfig.getNumber("transcriptionMaxInstances") ?? 2,
+      concurrency:
+        cloudRunConfig.getNumber("transcriptionConcurrency") ?? 10,
     },
   },
   pubsub: {
@@ -87,7 +89,8 @@ const defaultStackConfig: StackConfig = {
     metadataSubscription:
       pubsubConfig.get("metadataSubscription") ?? "work-metadata",
     transcriptionSubscription:
-      pubsubConfig.get("transcriptionSubscription") ?? "work-transcription",
+      pubsubConfig.get("transcriptionSubscription") ??
+      "work-transcription",
     eventsMonitorSubscription:
       pubsubConfig.get("eventsMonitorSubscription") ?? "events-monitor",
   },
@@ -104,26 +107,12 @@ export const stackMetadata = {
 
 export const configuration: StackConfig = defaultStackConfig;
 
-const projectId = configuration.appEngineProject;
-const apiServiceName = configuration.services.api.serviceName;
-const apiVersionId = configuration.services.api.versionId;
+const envVars = (vars: Record<string, pulumi.Input<string>>) =>
+  Object.entries(vars).map(([name, value]) => ({ name, value }));
 
-/**
- * Reference the existing App Engine application so other resources can
- * depend on the established platform instead of attempting to recreate it.
- */
-export const appEngineApplication = gcp.appengine.Application.get(
-  "existingAppEngine",
-  projectId
-);
+const projectId = configuration.project;
 
-export const existingApiServiceVersion = apiVersionId
-  ? gcp.appengine.StandardAppVersion.get(
-      "existingApiService",
-      `apps/${projectId}/services/${apiServiceName}/versions/${apiVersionId}`
-    )
-  : undefined;
-
+// Shared storage bucket (retained from previous architecture)
 const bucketSuffix = new random.RandomString("sharedArtifactsBucketSuffix", {
   length: 6,
   special: false,
@@ -144,6 +133,7 @@ export const sharedArtifactsBucket = new gcp.storage.Bucket(
   }
 );
 
+// Pub/Sub topics and subscriptions
 export const workTopic = new gcp.pubsub.Topic("workTopic", {
   name: configuration.pubsub.workTopic,
 });
@@ -156,8 +146,121 @@ export const dlqTopic = new gcp.pubsub.Topic("workDlqTopic", {
   name: configuration.pubsub.dlqTopic,
 });
 
-const metadataPushEndpoint = pulumi.interpolate`https://${configuration.services.metadataWorker.serviceName}-dot-${projectId}.appspot.com/pubsub`;
-const transcriptionPushEndpoint = pulumi.interpolate`https://${configuration.services.transcriptionWorker.serviceName}-dot-${projectId}.appspot.com/pubsub`;
+const createService = (
+  logicalName: string,
+  config: CloudRunServiceConfig,
+  env: Record<string, pulumi.Input<string>>,
+  ingress: "INGRESS_TRAFFIC_ALL" | "INGRESS_TRAFFIC_INTERNAL_ONLY" | "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+) =>
+  new gcp.cloudrunv2.Service(logicalName, {
+    project: projectId,
+    location: configuration.region,
+    name: config.serviceName,
+    ingress,
+    template: {
+      serviceAccount: configuration.serviceAccountEmail,
+      maxInstanceRequestConcurrency: config.concurrency,
+      scaling: {
+        minInstanceCount: config.minInstances,
+        maxInstanceCount: config.maxInstances,
+      },
+      containers: [
+        {
+          image: config.image,
+          ports: [{ containerPort: 8080 }],
+          envs: envVars(env),
+          resources: {
+            limits: {
+              cpu: config.cpu,
+              memory: config.memory,
+            },
+          },
+        },
+      ],
+    },
+    labels: {
+      environment: stackMetadata.stack,
+      managed_by: "pulumi",
+    },
+  });
+
+const apiService = createService(
+  "apiService",
+  configuration.services.api,
+  {
+    NODE_ENV: "production",
+    PORT: "8080",
+    PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
+    PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
+    SHARED_BUCKET: sharedArtifactsBucket.name,
+  },
+  "INGRESS_TRAFFIC_ALL"
+);
+
+const metadataWorkerService = createService(
+  "metadataWorkerService",
+  configuration.services.metadataWorker,
+  {
+    NODE_ENV: "production",
+    PORT: "8080",
+    PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
+    PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
+    PUBSUB_SUBSCRIPTION: configuration.pubsub.metadataSubscription,
+    SHARED_BUCKET: sharedArtifactsBucket.name,
+  },
+  "INGRESS_TRAFFIC_ALL"
+);
+
+const transcriptionWorkerService = createService(
+  "transcriptionWorkerService",
+  configuration.services.transcriptionWorker,
+  {
+    NODE_ENV: "production",
+    PORT: "8080",
+    PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
+    PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
+    PUBSUB_SUBSCRIPTION:
+      configuration.pubsub.transcriptionSubscription,
+    SHARED_BUCKET: sharedArtifactsBucket.name,
+  },
+  "INGRESS_TRAFFIC_ALL"
+);
+
+// IAM bindings
+new gcp.cloudrunv2.ServiceIamMember("apiPublicInvoker", {
+  project: projectId,
+  location: configuration.region,
+  name: apiService.name,
+  role: "roles/run.invoker",
+  member: "allUsers",
+});
+
+const pubsubInvokerMember = pulumi.interpolate`serviceAccount:${configuration.serviceAccountEmail}`;
+
+new gcp.cloudrunv2.ServiceIamMember("metadataInvoker", {
+  project: projectId,
+  location: configuration.region,
+  name: metadataWorkerService.name,
+  role: "roles/run.invoker",
+  member: pubsubInvokerMember,
+});
+
+new gcp.cloudrunv2.ServiceIamMember("transcriptionInvoker", {
+  project: projectId,
+  location: configuration.region,
+  name: transcriptionWorkerService.name,
+  role: "roles/run.invoker",
+  member: pubsubInvokerMember,
+});
+
+// Pub/Sub subscriptions now target Cloud Run endpoints
+const metadataPushEndpoint = metadataWorkerService.uri.apply(
+  (uri) => `${uri}/pubsub`
+);
+
+const transcriptionPushEndpoint = transcriptionWorkerService.uri.apply(
+  (uri) => `${uri}/pubsub`
+);
 
 export const metadataSubscription = new gcp.pubsub.Subscription(
   "metadataSubscription",
@@ -176,7 +279,7 @@ export const metadataSubscription = new gcp.pubsub.Subscription(
     pushConfig: {
       pushEndpoint: metadataPushEndpoint,
       oidcToken: {
-        serviceAccountEmail: configuration.appEngineServiceAccount,
+        serviceAccountEmail: configuration.serviceAccountEmail,
         audience: metadataPushEndpoint,
       },
     },
@@ -200,7 +303,7 @@ export const transcriptionSubscription = new gcp.pubsub.Subscription(
     pushConfig: {
       pushEndpoint: transcriptionPushEndpoint,
       oidcToken: {
-        serviceAccountEmail: configuration.appEngineServiceAccount,
+        serviceAccountEmail: configuration.serviceAccountEmail,
         audience: transcriptionPushEndpoint,
       },
     },
@@ -213,6 +316,9 @@ export const eventsMonitorSubscription = new gcp.pubsub.Subscription(
     name: configuration.pubsub.eventsMonitorSubscription,
     topic: eventsTopic.name,
     ackDeadlineSeconds: 30,
-    retainAckedMessages: false,
   }
 );
+
+export const apiUrl = apiService.uri;
+export const metadataWorkerUrl = metadataWorkerService.uri;
+export const transcriptionWorkerUrl = transcriptionWorkerService.uri;

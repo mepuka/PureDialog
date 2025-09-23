@@ -1,0 +1,22 @@
+{
+  "name": "@puredialog/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@effect/platform-node": "^0.91.0",
+    "@puredialog/domain": "workspace:*",
+    "@puredialog/ingestion": "workspace:*",
+    "effect": "^3.16.16"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}

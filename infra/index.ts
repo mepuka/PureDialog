@@ -189,7 +189,6 @@ const apiService = createService(
   configuration.services.api,
   {
     NODE_ENV: "production",
-    PORT: "8080",
     PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     SHARED_BUCKET: sharedArtifactsBucket.name,
@@ -202,7 +201,6 @@ const metadataWorkerService = createService(
   configuration.services.metadataWorker,
   {
     NODE_ENV: "production",
-    PORT: "8080",
     PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     PUBSUB_SUBSCRIPTION: configuration.pubsub.metadataSubscription,
@@ -216,7 +214,6 @@ const transcriptionWorkerService = createService(
   configuration.services.transcriptionWorker,
   {
     NODE_ENV: "production",
-    PORT: "8080",
     PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     PUBSUB_SUBSCRIPTION:

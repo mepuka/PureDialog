@@ -1,7 +1,7 @@
 import { HttpClientResponse } from "@effect/platform";
 import { Effect, Schema } from "effect";
 import { YoutubeApiError } from "../errors.js";
-import { Channel, Video } from "../resources.js";
+import { RawChannel, RawVideo } from "../resources.js";
 
 // API Response wrapper schema
 const ApiResponse = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
@@ -24,8 +24,8 @@ const ApiResponse = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
     ),
   });
 
-export const VideoResponse = ApiResponse(Video);
-export const ChannelResponse = ApiResponse(Channel);
+export const VideoResponse = ApiResponse(RawVideo);
+export const ChannelResponse = ApiResponse(RawChannel);
 
 export const decodeVideoResponse = (
   response: HttpClientResponse.HttpClientResponse,

@@ -180,7 +180,8 @@ const VideoStatistics = Schema.Struct({
   commentCount: Schema.optional(Schema.String),
 });
 
-export const Video = Schema.Struct({
+// Raw YouTube API video schema (internal use only)
+export const RawVideo = Schema.Struct({
   kind: Schema.Literal("youtube#video"),
   etag: Schema.String,
   id: VideoId,
@@ -188,6 +189,26 @@ export const Video = Schema.Struct({
   contentDetails: VideoContentDetails,
   status: VideoStatus,
   statistics: VideoStatistics,
+});
+
+export type RawVideo = Schema.Schema.Type<typeof RawVideo>;
+
+// Simplified video schema for application use
+export const Video = Schema.Struct({
+  id: VideoId,
+  title: Schema.String,
+  description: Schema.String,
+  publishedAt: Schema.String,
+  channelId: ChannelId,
+  channelTitle: Schema.String,
+  duration: Schema.String,
+  viewCount: Schema.optional(Schema.String),
+  likeCount: Schema.optional(Schema.String),
+  commentCount: Schema.optional(Schema.String),
+  thumbnails: Thumbnails,
+  tags: Schema.optional(Schema.Array(Schema.String)),
+  categoryId: Schema.optional(Schema.String),
+  privacyStatus: Schema.String,
 });
 
 export type Video = Schema.Schema.Type<typeof Video>;
@@ -225,7 +246,8 @@ const ChannelStatus = Schema.Struct({
   selfDeclaredMadeForKids: Schema.optional(Schema.Boolean),
 });
 
-export const Channel = Schema.Struct({
+// Raw YouTube API channel schema (internal use only)
+export const RawChannel = Schema.Struct({
   kind: Schema.Literal("youtube#channel"),
   etag: Schema.String,
   id: ChannelId,
@@ -235,7 +257,58 @@ export const Channel = Schema.Struct({
   status: Schema.optional(ChannelStatus),
 });
 
+export type RawChannel = Schema.Schema.Type<typeof RawChannel>;
+
+// Simplified channel schema for application use
+export const Channel = Schema.Struct({
+  id: ChannelId,
+  title: Schema.String,
+  description: Schema.String,
+  customUrl: Schema.optional(Schema.String),
+  publishedAt: Schema.String,
+  thumbnails: Thumbnails,
+  country: Schema.optional(Schema.String),
+  viewCount: Schema.optional(Schema.String),
+  subscriberCount: Schema.optional(Schema.String),
+  hiddenSubscriberCount: Schema.optional(Schema.Boolean),
+  videoCount: Schema.optional(Schema.String),
+  privacyStatus: Schema.String,
+});
+
 export type Channel = Schema.Schema.Type<typeof Channel>;
 
 export const Resource = Schema.Union(Video, Channel);
 export type Resource = Schema.Schema.Type<typeof Resource>;
+
+// Transformation functions from raw API types to simplified types
+export const transformVideo = (rawVideo: RawVideo): Video => ({
+  id: rawVideo.id,
+  title: rawVideo.snippet.title,
+  description: rawVideo.snippet.description,
+  publishedAt: rawVideo.snippet.publishedAt,
+  channelId: rawVideo.snippet.channelId,
+  channelTitle: rawVideo.snippet.channelTitle,
+  duration: rawVideo.contentDetails.duration,
+  viewCount: rawVideo.statistics.viewCount,
+  likeCount: rawVideo.statistics.likeCount,
+  commentCount: rawVideo.statistics.commentCount,
+  thumbnails: rawVideo.snippet.thumbnails,
+  tags: rawVideo.snippet.tags,
+  categoryId: rawVideo.snippet.categoryId,
+  privacyStatus: rawVideo.status.privacyStatus,
+});
+
+export const transformChannel = (rawChannel: RawChannel): Channel => ({
+  id: rawChannel.id,
+  title: rawChannel.snippet.title,
+  description: rawChannel.snippet.description,
+  customUrl: rawChannel.snippet.customUrl,
+  publishedAt: rawChannel.snippet.publishedAt,
+  thumbnails: rawChannel.snippet.thumbnails,
+  country: rawChannel.snippet.country,
+  viewCount: rawChannel.statistics?.viewCount,
+  subscriberCount: rawChannel.statistics?.subscriberCount,
+  hiddenSubscriberCount: rawChannel.statistics?.hiddenSubscriberCount,
+  videoCount: rawChannel.statistics?.videoCount,
+  privacyStatus: rawChannel.status?.privacyStatus ?? "public",
+});

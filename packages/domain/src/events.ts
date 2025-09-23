@@ -1,103 +1,47 @@
 import { Schema } from "@effect/schema";
-import { Data } from "effect";
-import { DiarizedTranscript, Job, MediaMetadata } from "./entities";
+import { TranscriptionJob } from "./entities";
+import { Transcript } from "./transcript";
+import { JobId, RequestId } from "./ids";
 import { JobStatus } from "./status";
-import { JobId, UserId } from "./ids";
-
-// --- Domain Events using Tagged Structs ---
-
-/** Domain events as a tagged enum for better pattern matching. */
-export type DomainEvent = Data.TaggedEnum<{
-  JobQueued: {
-    readonly job: Job;
-    readonly occurredAt: Date;
-  };
-  MetadataReady: {
-    readonly jobId: JobId;
-    readonly userId: UserId;
-    readonly metadata: MediaMetadata;
-    readonly occurredAt: Date;
-  };
-  TranscriptComplete: {
-    readonly jobId: JobId;
-    readonly userId: UserId;
-    readonly transcript: DiarizedTranscript;
-    readonly occurredAt: Date;
-  };
-  JobFailed: {
-    readonly jobId: JobId;
-    readonly userId: UserId;
-    readonly error: string;
-    readonly finalAttemptCount: number;
-    readonly occurredAt: Date;
-  };
-  JobStatusChanged: {
-    readonly jobId: JobId;
-    readonly userId: UserId;
-    readonly from: JobStatus;
-    readonly to: JobStatus;
-    readonly occurredAt: Date;
-  };
-}>;
-
-/** Event constructors and utilities. */
-export const {
-  JobQueued,
-  MetadataReady,
-  TranscriptComplete,
-  JobFailed,
-  JobStatusChanged,
-  $is,
-  $match,
-} = Data.taggedEnum<DomainEvent>();
 
 // --- Event Schemas for Serialization ---
 
-export const JobQueuedSchema = Schema.Struct({
-  _tag: Schema.Literal("JobQueued"),
-  job: Job,
+export type JobQueued = Schema.Schema.Type<typeof JobQueued>;
+export const JobQueued = Schema.TaggedStruct("JobQueued", {
+  job: TranscriptionJob,
   occurredAt: Schema.Date,
 });
 
-export const MetadataReadySchema = Schema.Struct({
-  _tag: Schema.Literal("MetadataReady"),
+export type TranscriptComplete = Schema.Schema.Type<typeof TranscriptComplete>;
+export const TranscriptComplete = Schema.TaggedStruct("TranscriptComplete", {
   jobId: JobId,
-  userId: UserId,
-  metadata: MediaMetadata,
+  requestId: RequestId,
+  transcript: Transcript,
   occurredAt: Schema.Date,
 });
 
-export const TranscriptCompleteSchema = Schema.Struct({
-  _tag: Schema.Literal("TranscriptComplete"),
+export type JobFailed = Schema.Schema.Type<typeof JobFailed>;
+export const JobFailed = Schema.TaggedStruct("JobFailed", {
   jobId: JobId,
-  userId: UserId,
-  transcript: DiarizedTranscript,
-  occurredAt: Schema.Date,
-});
-
-export const JobFailedSchema = Schema.Struct({
-  _tag: Schema.Literal("JobFailed"),
-  jobId: JobId,
-  userId: UserId,
+  requestId: RequestId,
   error: Schema.String,
-  finalAttemptCount: Schema.Number,
+  attempts: Schema.Number,
   occurredAt: Schema.Date,
 });
 
-export const JobStatusChangedSchema = Schema.Struct({
-  _tag: Schema.Literal("JobStatusChanged"),
+export type JobStatusChanged = Schema.Schema.Type<typeof JobStatusChanged>;
+export const JobStatusChanged = Schema.TaggedStruct("JobStatusChanged", {
   jobId: JobId,
-  userId: UserId,
+  requestId: RequestId,
   from: JobStatus,
   to: JobStatus,
   occurredAt: Schema.Date,
 });
 
 /** Union schema for all domain events. */
-export const DomainEventSchema = Schema.Union(
-  JobQueuedSchema,
-  MetadataReadySchema,
-  TranscriptCompleteSchema,
-  JobFailedSchema,
-  JobStatusChangedSchema
+export const DomainEvent = Schema.Union(
+  JobQueued,
+  TranscriptComplete,
+  JobFailed,
+  JobStatusChanged
 );

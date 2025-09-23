@@ -1,6 +1,6 @@
 import { Schema } from "@effect/schema";
 import { Data } from "effect";
-import { JobId, UserId } from "./ids.js";
+import { JobId, RequestId } from "./ids.js";
 
 // --- Base Error Categories ---
 
@@ -45,7 +45,7 @@ export class StreamingError extends Data.TaggedError("StreamingError")<{
 /** Domain-specific error for authentication/authorization. */
 export class AuthorizationError extends Data.TaggedError("AuthorizationError")<{
   readonly message: string;
-  readonly userId?: UserId;
+  readonly requestId?: RequestId;
   readonly resource: string;
   readonly action: string;
 }> {}
@@ -110,7 +110,7 @@ export const StreamingErrorSchema = Schema.Struct({
 export const AuthorizationErrorSchema = Schema.Struct({
   _tag: Schema.Literal("AuthorizationError"),
   message: Schema.String,
-  userId: Schema.optional(Schema.String), // UserId as string for serialization
+  requestId: Schema.optional(Schema.String), // RequestId as string for serialization
   resource: Schema.String,
   action: Schema.String,
 });

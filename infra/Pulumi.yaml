@@ -1,0 +1,4 @@
+name: pure-dialog-infra
+runtime: nodejs
+main: .
+description: Infrastructure as Code for PureDialog ingestion services on GCP App Engine and Pub/Sub

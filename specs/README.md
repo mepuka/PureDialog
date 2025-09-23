@@ -8,5 +8,7 @@
 - [ ] 05 - Security, Auth & Rate Limiting (`./05-security-auth-rate-limiting/instructions.md`)
 - [ ] 06 - Domain Models Overview (`./06-domain-models-overview/instructions.md`)
 - [ ] Architecture Review (`./architecture-review.md`)
+- [ ] **ingestion-pub-sub** - Effect-based Pub/Sub client for ingestion job orchestration
+
 
 Note: These are Phase 1 instruction drafts. They will evolve through the spec-driven workflow and receive explicit approvals before implementation.

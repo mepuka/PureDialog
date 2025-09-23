@@ -1,7 +1,7 @@
 import { Schema } from "@effect/schema";
 import { Data } from "effect";
 
-/** Job processing status enumeration. */
+/** TranscriptionJob processing status enumeration. */
 export const JobStatus = Schema.Literal(
   "Queued",
   "MetadataReady",
@@ -12,7 +12,7 @@ export const JobStatus = Schema.Literal(
 );
 export type JobStatus = Schema.Schema.Type<typeof JobStatus>;
 
-/** Job status transition as a tagged enum for better pattern matching. */
+/** TranscriptionJob status transition as a tagged enum for better pattern matching. */
 export type JobStatusTransition = Data.TaggedEnum<{
   Queued: {
     readonly allowedNext: readonly ["MetadataReady", "Failed", "Cancelled"];

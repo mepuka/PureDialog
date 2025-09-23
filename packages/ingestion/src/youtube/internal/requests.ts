@@ -1,11 +1,11 @@
 import { HttpClientRequest } from "@effect/platform";
-import { YoutubeConfig } from "../config.js";
+import { YoutubeConfigInterface } from "../config.js";
 import { ChannelId, VideoId } from "../resources.js";
 
 export const makeApiRequest = (
   endpoint: string,
   params: Record<string, string>,
-  config: YoutubeConfig,
+  config: YoutubeConfigInterface,
 ) =>
   HttpClientRequest.get(`${config.baseUrl}/${endpoint}`).pipe(
     HttpClientRequest.setHeaders({
@@ -16,7 +16,7 @@ export const makeApiRequest = (
     HttpClientRequest.appendUrlParams(params),
   );
 
-export const makeVideoRequest = (ids: VideoId[], config: YoutubeConfig) =>
+export const makeVideoRequest = (ids: VideoId[], config: YoutubeConfigInterface) =>
   makeApiRequest(
     "videos",
     {
@@ -26,7 +26,7 @@ export const makeVideoRequest = (ids: VideoId[], config: YoutubeConfig) =>
     config,
   );
 
-export const makeChannelRequest = (ids: ChannelId[], config: YoutubeConfig) =>
+export const makeChannelRequest = (ids: ChannelId[], config: YoutubeConfigInterface) =>
   makeApiRequest(
     "channels",
     {

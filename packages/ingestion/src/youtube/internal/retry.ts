@@ -17,8 +17,8 @@ export const youtubeRetrySchedule = (maxAttempts: number) =>
     ),
   );
 
-export const withRetry = (config: YoutubeConfigInterface) => <A, R>(effect: Effect.Effect<A, YoutubeApiError, R>) =>
-  effect.pipe(Effect.retry(youtubeRetrySchedule(config.retryAttempts)));
+export const withRetry = (_config: YoutubeConfigInterface) => <A, R>(effect: Effect.Effect<A, YoutubeApiError, R>) =>
+  effect.pipe(Effect.retry(youtubeRetrySchedule(3))); // Default retry attempts since retryAttempts removed
 
 // HTTP error transformation
 export const transformHttpError = (error: HttpClientError.HttpClientError): YoutubeApiError => {

@@ -7,9 +7,10 @@ for the architectural blueprint.
 ## Local development
 
 1. Install dependencies: `pnpm install`
-2. Select a stack: `pulumi stack select <stack>`
-3. Preview changes: `pulumi preview`
-4. Apply changes: `pulumi up`
+2. Initialize or select a stack (e.g. `pulumi stack init dev` then `pulumi stack select dev`)
+3. Ensure stack configuration matches `Pulumi.<stack>.yaml`
+4. Preview changes: `pulumi preview`
+5. Apply changes: `pulumi up`
 
 Integrate stack configuration files (`Pulumi.<stack>.yaml`) with the values documented in the
 plan before deploying.

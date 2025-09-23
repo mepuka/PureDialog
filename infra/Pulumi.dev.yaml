@@ -1,0 +1,16 @@
+config:
+  gcp:project: gen-lang-client-0874846742
+  gcp:region: us-west1
+  appEngine:project: gen-lang-client-0874846742
+  appEngine:serviceAccount: 211636922435-compute@developer.gserviceaccount.com
+  appEngine:apiServiceName: default
+  appEngine:apiVersionId: 20250921t082516
+  appEngine:metadataServiceName: worker-metadata
+  appEngine:transcriptionServiceName: worker-transcription
+  pubsub:workTopic: work
+  pubsub:eventsTopic: events
+  pubsub:dlqTopic: work-dlq
+  pubsub:metadataSubscription: work-metadata
+  pubsub:transcriptionSubscription: work-transcription
+  pubsub:eventsMonitorSubscription: events-monitor
+  storage:bucketBaseName: ingestion-shared-artifacts

@@ -20,14 +20,15 @@ Declared in `infra/index.ts` using `@pulumi/pulumi` and `@pulumi/gcp`:
   - `worker-metadata` `StandardAppVersion` (new service).
   - `worker-transcription` `StandardAppVersion` (new service).
   - Shared settings: automatic scaling targets, readiness/liveness checks, `serviceAccount: 211636922435-compute@developer.gserviceaccount.com`, handler definitions for `/pubsub` and `/health`.
+  - `ingestion-api` version referenced via `StandardAppVersion.get` (no redeploy yet).
 - **Pub/Sub Topics**
-  - `ingestion-work` (primary work queue).
-  - `ingestion-events` (status/event stream).
-  - `ingestion-work-dlq` (dead-letter topic).
+  - `work` (primary work queue).
+  - `events` (status/event stream).
+  - `work-dlq` (dead-letter topic).
 - **Pub/Sub Subscriptions**
-  - `ingestion-work-metadata` → push endpoint `https://worker-metadata-dot-<project>.appspot.com/pubsub`, DLQ to `ingestion-work-dlq`, OIDC token auth.
-  - `ingestion-work-transcription` → push endpoint `https://worker-transcription-dot-<project>.appspot.com/pubsub`, same DLQ/auth config.
-  - `ingestion-events-monitor` (initially pull; allows API/service diagnostics without new ingress surface).
+  - `work-metadata` → push endpoint `https://worker-metadata-dot-<project>.appspot.com/pubsub`, DLQ to `ingestion-work-dlq`, OIDC token auth.
+  - `work-transcription` → push endpoint `https://worker-transcription-dot-<project>.appspot.com/pubsub`, same DLQ/auth config.
+  - `events-monitor` (initially pull; allows API/service diagnostics without new ingress surface).
 - **Storage**
   - Shared Cloud Storage bucket `ingestion-shared-artifacts-${randomSuffix}` (suffix generated via `@pulumi/random` to meet global uniqueness). Grant App Engine default SA read/write.
 - **Future/Optional Resources** (not in initial scope, but noted for later)
@@ -43,6 +44,7 @@ Declared in `infra/index.ts` using `@pulumi/pulumi` and `@pulumi/gcp`:
   - `infra/Pulumi.<stack>.yaml` (stack config: `gcp:project`, `gcp:region`, naming prefixes, DLQ settings, bucket retention toggles).
   - `infra/index.ts` (resource declarations).
   - `infra/package.json` (includes `@pulumi/pulumi`, `@pulumi/gcp`, `@pulumi/random`).
+- Default config seeds region `us-west1` and project `gen-lang-client-0874846742` to mirror the existing App Engine application described via `gcloud app describe`.
 - `pnpm-workspace.yaml` already covers `infra/*`; no additional workspace change required. Document Pulumi workflow in repo docs later.
 
 ## 5. App Engine Configuration via Pulumi
@@ -59,6 +61,7 @@ Declared in `infra/index.ts` using `@pulumi/pulumi` and `@pulumi/gcp`:
 
 ## 7. Resource Adoption & State Management
 - Record exact `pulumi import` command for the existing API version once the current version ID is known: `pulumi import gcp:appengine/standardAppVersion:StandardAppVersion ingestion-api "apps/<project>/services/ingestion-api/versions/<version>"`. *(Manual CLI step.)*
+- The Pulumi program references the existing App Engine application and default service version via `gcp.appengine.Application.get` / `gcp.appengine.StandardAppVersion.get`, so stack config must supply project id, service account, and the active API version id before previews.
 - Capture Pulumi import output and reconcile generated args with `index.ts` to achieve zero-diff previews.
 - If Pub/Sub topics/subscriptions already exist, plan matching imports; otherwise allow Pulumi to create them fresh (imports would be additional CLI steps).
 

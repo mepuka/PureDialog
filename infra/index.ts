@@ -53,7 +53,7 @@ const defaultStackConfig: StackConfig = {
     api: {
       serviceName: cloudRunConfig.get("apiServiceName") ?? "api",
       image: cloudRunConfig.require("apiImage"),
-      cpu: cloudRunConfig.get("apiCpu") ?? "0.25",
+      cpu: cloudRunConfig.get("apiCpu") ?? "1",
       memory: cloudRunConfig.get("apiMemory") ?? "512Mi",
       minInstances: cloudRunConfig.getNumber("apiMinInstances") ?? 0,
       maxInstances: cloudRunConfig.getNumber("apiMaxInstances") ?? 2,
@@ -63,7 +63,7 @@ const defaultStackConfig: StackConfig = {
       serviceName:
         cloudRunConfig.get("metadataServiceName") ?? "worker-metadata",
       image: cloudRunConfig.require("metadataImage"),
-      cpu: cloudRunConfig.get("metadataCpu") ?? "0.25",
+      cpu: cloudRunConfig.get("metadataCpu") ?? "1",
       memory: cloudRunConfig.get("metadataMemory") ?? "512Mi",
       minInstances: cloudRunConfig.getNumber("metadataMinInstances") ?? 0,
       maxInstances: cloudRunConfig.getNumber("metadataMaxInstances") ?? 2,
@@ -74,7 +74,7 @@ const defaultStackConfig: StackConfig = {
         cloudRunConfig.get("transcriptionServiceName") ??
         "worker-transcription",
       image: cloudRunConfig.require("transcriptionImage"),
-      cpu: cloudRunConfig.get("transcriptionCpu") ?? "0.25",
+      cpu: cloudRunConfig.get("transcriptionCpu") ?? "1",
       memory: cloudRunConfig.get("transcriptionMemory") ?? "512Mi",
       minInstances: cloudRunConfig.getNumber("transcriptionMinInstances") ?? 0,
       maxInstances: cloudRunConfig.getNumber("transcriptionMaxInstances") ?? 2,

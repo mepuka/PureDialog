@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
           gcloud builds submit \
             --config=cloudbuild.yaml \
-            --substitutions=_REGION=${REGION},_REPOSITORY=${REPOSITORY} \
+            --substitutions=_REGION=${REGION},_REPOSITORY=${REPOSITORY},COMMIT_SHA=${{ github.sha }} \
             --project=${GCP_PROJECT_ID}
 
       - name: Setup pnpm

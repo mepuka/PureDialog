@@ -8,12 +8,7 @@
     "paths": {
       "@puredialog/domain": ["../domain/src/index"],
       "@puredialog/domain/*": ["../domain/src/*"],
-      "@effect/schema": [
-        "../domain/node_modules/@effect/schema/dist/esm/index"
-      ],
-      "@effect/schema/*": [
-        "../domain/node_modules/@effect/schema/dist/esm/*"
-      ]
+      
     }
   },
   "include": ["src/**/*"]

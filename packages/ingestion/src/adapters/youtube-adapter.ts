@@ -1,5 +1,5 @@
-import * as ParseResult from "@effect/schema/ParseResult";
-import * as Schema from "@effect/schema/Schema";
+import { ParseResult } from "effect";
+import { Schema } from "effect";
 import { Effect } from "effect";
 
 import { youtube_v3 } from "@googleapis/youtube";

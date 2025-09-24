@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { JobId, TranscriptId, RequestId } from "./ids";
 import { MediaResource } from "./media-resources";
 import { JobStatus } from "./status";

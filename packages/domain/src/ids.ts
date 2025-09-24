@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 
 /** A unique identifier for a processing job. */
 export const JobId = Schema.String.pipe(Schema.brand("JobId"));

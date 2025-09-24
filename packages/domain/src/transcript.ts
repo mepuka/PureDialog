@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { JobId, TranscriptId } from "./ids";
 
 /**
@@ -9,7 +9,7 @@ export const Timestamp = Schema.String.pipe(
   Schema.pattern(/^(\d{2,}):([0-5]\d):([0-5]\d)$/, {
     message: () => "Timestamp must be in HH:MM:SS format.",
   }),
-  Schema.brand("Timestamp")
+  Schema.brand("Timestamp"),
 );
 export type Timestamp = Schema.Schema.Type<typeof Timestamp>;
 
@@ -27,7 +27,7 @@ export type SpeakerRole = Schema.Schema.Type<typeof SpeakerRole>;
 export const DialogueTurn = Schema.Struct({
   timestamp: Timestamp,
   speaker: SpeakerRole,
-  text: Schema.String.pipe(Schema.nonEmpty()),
+  text: Schema.String.pipe(Schema.nonEmptyString()),
 });
 export type DialogueTurn = Schema.Schema.Type<typeof DialogueTurn>;
 
@@ -40,7 +40,7 @@ export const Transcript = Schema.Struct({
   id: TranscriptId,
   jobId: JobId,
   // The full, raw text is stored for auditing and potential reprocessing.
-  rawText: Schema.String.pipe(Schema.nonEmpty()),
+  rawText: Schema.String.pipe(Schema.nonEmptyString()),
   // The structured turns are the primary, queryable data.
   turns: Schema.Array(DialogueTurn),
   createdAt: Schema.Date,

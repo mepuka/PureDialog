@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { JobId, MediaResourceId } from "./ids";
 import { SpeakerRole } from "./transcript";
 
@@ -7,7 +7,7 @@ import { SpeakerRole } from "./transcript";
  */
 export const LanguageCode = Schema.String.pipe(
   Schema.pattern(/^[a-z]{2}(-[A-Z]{2})?$/),
-  Schema.brand("LanguageCode")
+  Schema.brand("LanguageCode"),
 );
 export type LanguageCode = Schema.Schema.Type<typeof LanguageCode>;
 
@@ -17,7 +17,7 @@ export type LanguageCode = Schema.Schema.Type<typeof LanguageCode>;
  */
 export const Speaker = Schema.Struct({
   // A unique identifier for this speaker within the context of this job (e.g., "S1", "S2")
-  id: Schema.String.pipe(Schema.nonEmpty()),
+  id: Schema.String.pipe(Schema.nonEmptyString()),
   role: SpeakerRole,
   name: Schema.optional(Schema.String),
   // Providing a structured object for affiliation is more extensible
@@ -25,7 +25,7 @@ export const Speaker = Schema.Struct({
     Schema.Struct({
       name: Schema.String,
       url: Schema.optional(Schema.String.pipe(Schema.pattern(/^https?:\/\//))),
-    })
+    }),
   ),
   bio: Schema.optional(Schema.String),
 });
@@ -39,7 +39,7 @@ export type Speaker = Schema.Schema.Type<typeof Speaker>;
 export const MediaMetadata = Schema.Struct({
   mediaResourceId: MediaResourceId,
   jobId: JobId,
-  title: Schema.String.pipe(Schema.nonEmpty()),
+  title: Schema.String.pipe(Schema.nonEmptyString()),
   summary: Schema.optional(Schema.String),
   // Keywords/tags provide crucial context for the ASR model's vocabulary.
   tags: Schema.Array(Schema.String),

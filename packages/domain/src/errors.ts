@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { Data } from "effect";
 import { JobId, RequestId } from "./ids.js";
 

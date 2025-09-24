@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { RequestId } from "./ids";
 
 /** Specifies a resource to be processed from input text. */
@@ -8,7 +8,7 @@ export const ResourceRequest = Schema.Struct({
   /** Optional specific identifier if known (e.g., video ID) */
   resourceId: Schema.optional(Schema.String),
   /** Optional additional processing options */
-  options: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+  options: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
 });
 export type ResourceRequest = Schema.Schema.Type<typeof ResourceRequest>;
 
@@ -17,7 +17,7 @@ export const CreateTranscriptionJobRequest = Schema.Struct({
   /** User making the request */
   requestId: RequestId,
   /** Non-empty text input containing resource references */
-  inputText: Schema.String.pipe(Schema.nonEmpty()),
+  inputText: Schema.String.pipe(Schema.nonEmptyString()),
   /** Resources to extract and process from the input text */
   resources: Schema.Array(ResourceRequest).pipe(Schema.minItems(1)),
 });

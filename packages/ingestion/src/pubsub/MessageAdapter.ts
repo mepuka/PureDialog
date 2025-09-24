@@ -1,11 +1,11 @@
-import * as ParseResult from "@effect/schema/ParseResult";
-import * as Schema from "@effect/schema/Schema";
 import {
   DomainEvent as DomainEventSchema,
   JobId,
   RequestId,
   TranscriptionJob as TranscriptionJobSchema,
 } from "@puredialog/domain";
+import { ParseResult } from "effect";
+import { Schema } from "effect";
 import { Effect, Match } from "effect";
 import { buildAttributes } from "./Config.js";
 import { MessageEncodingError } from "./errors.js";

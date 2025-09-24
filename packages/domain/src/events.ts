@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { TranscriptionJob } from "./entities";
 import { JobId, RequestId } from "./ids";
 import { JobStatus } from "./status";

@@ -61,7 +61,6 @@ GEMINI.md
 # tsconfig.json - keep (TypeScript config)
 # tailwind.config.js - keep (styling config)
 # postcss.config.js - keep (CSS processing)
-pnpm-lock.yaml
 
 # Keep only what's needed for production
 # dist/ - keep (built assets)

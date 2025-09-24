@@ -13,6 +13,6 @@ export type TranscriptId = Schema.Schema.Type<typeof TranscriptId>;
 
 /** A unique identifier for a media resource. */
 export const MediaResourceId = Schema.String.pipe(
-  Schema.brand("MediaResourceId")
+  Schema.brand("MediaResourceId"),
 );
 export type MediaResourceId = Schema.Schema.Type<typeof MediaResourceId>;

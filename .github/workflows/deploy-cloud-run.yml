@@ -121,6 +121,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
+          pulumi login
           pulumi stack select ${PULUMI_STACK} --non-interactive
           pulumi config set cloudrun:apiImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/api:${IMAGE_TAG} --non-interactive
           pulumi config set cloudrun:metadataImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/worker-metadata:${IMAGE_TAG} --non-interactive

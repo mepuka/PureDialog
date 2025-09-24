@@ -46,9 +46,8 @@ const storageConfig = new pulumi.Config("storage");
 const defaultStackConfig: StackConfig = {
   project: gcpConfig.get("project") ?? "gen-lang-client-0874846742",
   region: gcpConfig.get("region") ?? "us-west1",
-  serviceAccountEmail:
-    cloudRunConfig.get("serviceAccount") ??
-    "211636922435-compute@developer.gserviceaccount.com",
+  serviceAccountEmail: cloudRunConfig.get("serviceAccount")
+    ?? "211636922435-compute@developer.gserviceaccount.com",
   services: {
     api: {
       serviceName: cloudRunConfig.get("apiServiceName") ?? "api",
@@ -60,8 +59,7 @@ const defaultStackConfig: StackConfig = {
       concurrency: cloudRunConfig.getNumber("apiConcurrency") ?? 80,
     },
     metadataWorker: {
-      serviceName:
-        cloudRunConfig.get("metadataServiceName") ?? "worker-metadata",
+      serviceName: cloudRunConfig.get("metadataServiceName") ?? "worker-metadata",
       image: cloudRunConfig.require("metadataImage"),
       cpu: cloudRunConfig.get("metadataCpu") ?? "1",
       memory: cloudRunConfig.get("metadataMemory") ?? "512Mi",
@@ -70,33 +68,26 @@ const defaultStackConfig: StackConfig = {
       concurrency: cloudRunConfig.getNumber("metadataConcurrency") ?? 10,
     },
     transcriptionWorker: {
-      serviceName:
-        cloudRunConfig.get("transcriptionServiceName") ??
-        "worker-transcription",
+      serviceName: cloudRunConfig.get("transcriptionServiceName")
+        ?? "worker-transcription",
       image: cloudRunConfig.require("transcriptionImage"),
       cpu: cloudRunConfig.get("transcriptionCpu") ?? "1",
       memory: cloudRunConfig.get("transcriptionMemory") ?? "512Mi",
       minInstances: cloudRunConfig.getNumber("transcriptionMinInstances") ?? 0,
       maxInstances: cloudRunConfig.getNumber("transcriptionMaxInstances") ?? 2,
-      concurrency:
-        cloudRunConfig.getNumber("transcriptionConcurrency") ?? 10,
+      concurrency: cloudRunConfig.getNumber("transcriptionConcurrency") ?? 10,
     },
   },
   pubsub: {
     workTopic: pubsubConfig.get("workTopic") ?? "work",
     eventsTopic: pubsubConfig.get("eventsTopic") ?? "events",
     dlqTopic: pubsubConfig.get("dlqTopic") ?? "work-dlq",
-    metadataSubscription:
-      pubsubConfig.get("metadataSubscription") ?? "work-metadata",
-    transcriptionSubscription:
-      pubsubConfig.get("transcriptionSubscription") ??
-      "work-transcription",
-    eventsMonitorSubscription:
-      pubsubConfig.get("eventsMonitorSubscription") ?? "events-monitor",
+    metadataSubscription: pubsubConfig.get("metadataSubscription") ?? "work-metadata",
+    transcriptionSubscription: pubsubConfig.get("transcriptionSubscription") ?? "work-transcription",
+    eventsMonitorSubscription: pubsubConfig.get("eventsMonitorSubscription") ?? "events-monitor",
   },
   storage: {
-    bucketBaseName:
-      storageConfig.get("bucketBaseName") ?? "ingestion-shared-artifacts",
+    bucketBaseName: storageConfig.get("bucketBaseName") ?? "ingestion-shared-artifacts",
   },
 };
 
@@ -130,7 +121,7 @@ export const sharedArtifactsBucket = new gcp.storage.Bucket(
       environment: stackMetadata.stack,
       managed_by: "pulumi",
     },
-  }
+  },
 );
 
 // Pub/Sub topics and subscriptions
@@ -150,7 +141,10 @@ const createService = (
   logicalName: string,
   config: CloudRunServiceConfig,
   env: Record<string, pulumi.Input<string>>,
-  ingress: "INGRESS_TRAFFIC_ALL" | "INGRESS_TRAFFIC_INTERNAL_ONLY" | "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  ingress:
+    | "INGRESS_TRAFFIC_ALL"
+    | "INGRESS_TRAFFIC_INTERNAL_ONLY"
+    | "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
 ) =>
   new gcp.cloudrunv2.Service(logicalName, {
     project: projectId,
@@ -193,7 +187,7 @@ const apiService = createService(
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     SHARED_BUCKET: sharedArtifactsBucket.name,
   },
-  "INGRESS_TRAFFIC_ALL"
+  "INGRESS_TRAFFIC_ALL",
 );
 
 const metadataWorkerService = createService(
@@ -206,7 +200,7 @@ const metadataWorkerService = createService(
     PUBSUB_SUBSCRIPTION: configuration.pubsub.metadataSubscription,
     SHARED_BUCKET: sharedArtifactsBucket.name,
   },
-  "INGRESS_TRAFFIC_ALL"
+  "INGRESS_TRAFFIC_ALL",
 );
 
 const transcriptionWorkerService = createService(
@@ -216,11 +210,10 @@ const transcriptionWorkerService = createService(
     NODE_ENV: "production",
     PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
-    PUBSUB_SUBSCRIPTION:
-      configuration.pubsub.transcriptionSubscription,
+    PUBSUB_SUBSCRIPTION: configuration.pubsub.transcriptionSubscription,
     SHARED_BUCKET: sharedArtifactsBucket.name,
   },
-  "INGRESS_TRAFFIC_ALL"
+  "INGRESS_TRAFFIC_ALL",
 );
 
 // IAM bindings
@@ -252,11 +245,11 @@ new gcp.cloudrunv2.ServiceIamMember("transcriptionInvoker", {
 
 // Pub/Sub subscriptions now target Cloud Run endpoints
 const metadataPushEndpoint = metadataWorkerService.uri.apply(
-  (uri) => `${uri}/pubsub`
+  (uri) => `${uri}/pubsub`,
 );
 
 const transcriptionPushEndpoint = transcriptionWorkerService.uri.apply(
-  (uri) => `${uri}/pubsub`
+  (uri) => `${uri}/pubsub`,
 );
 
 export const metadataSubscription = new gcp.pubsub.Subscription(
@@ -280,7 +273,7 @@ export const metadataSubscription = new gcp.pubsub.Subscription(
         audience: metadataPushEndpoint,
       },
     },
-  }
+  },
 );
 
 export const transcriptionSubscription = new gcp.pubsub.Subscription(
@@ -304,7 +297,7 @@ export const transcriptionSubscription = new gcp.pubsub.Subscription(
         audience: transcriptionPushEndpoint,
       },
     },
-  }
+  },
 );
 
 export const eventsMonitorSubscription = new gcp.pubsub.Subscription(
@@ -313,7 +306,7 @@ export const eventsMonitorSubscription = new gcp.pubsub.Subscription(
     name: configuration.pubsub.eventsMonitorSubscription,
     topic: eventsTopic.name,
     ackDeadlineSeconds: 30,
-  }
+  },
 );
 
 export const apiUrl = apiService.uri;

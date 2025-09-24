@@ -1,8 +1,8 @@
 import { Schema } from "@effect/schema";
 import { TranscriptionJob } from "./entities";
-import { Transcript } from "./transcript";
 import { JobId, RequestId } from "./ids";
 import { JobStatus } from "./status";
+import { Transcript } from "./transcript";
 
 // --- Event Schemas for Serialization ---
 
@@ -43,5 +43,5 @@ export const DomainEvent = Schema.Union(
   JobQueued,
   TranscriptComplete,
   JobFailed,
-  JobStatusChanged
+  JobStatusChanged,
 );

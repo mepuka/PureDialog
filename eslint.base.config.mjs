@@ -1,5 +1,5 @@
-import eslint from "@eslint/js";
 import effect from "@effect/eslint-plugin";
+import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -20,7 +20,12 @@ export default tseslint.config(
     rules: {
       "@effect/dprint": [
         "error",
-        { config: { indentWidth: 2, lineWidth: 120 } },
+        {
+          config: {
+            indentWidth: 2,
+            lineWidth: 120,
+          },
+        },
       ],
       "@typescript-eslint/no-explicit-any": "error",
     },

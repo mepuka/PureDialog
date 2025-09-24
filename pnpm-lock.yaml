@@ -160,6 +160,9 @@ importers:
       '@effect/platform-node':
         specifier: ^0.91.0
         version: 0.91.0(@effect/cluster@0.43.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/workflow@0.5.1(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(@effect/rpc@0.65.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/sql@0.42.1(@effect/experimental@0.52.2(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(@effect/platform@0.88.2(effect@3.17.14))(effect@3.17.14))(effect@3.17.14)
+      '@effect/schema':
+        specifier: ^0.68.27
+        version: 0.68.27(effect@3.17.14)
       '@google-cloud/pubsub':
         specifier: ^4.7.0
         version: 4.11.0(encoding@0.1.13)

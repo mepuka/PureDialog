@@ -16,6 +16,7 @@
   "dependencies": {
     "@effect/platform": "^0.88.2",
     "@effect/platform-node": "^0.91.0",
+    "@effect/schema": "^0.68.27",
     "@google-cloud/pubsub": "^4.7.0",
     "@googleapis/youtube": "^29.0.0",
     "@puredialog/domain": "workspace:*",

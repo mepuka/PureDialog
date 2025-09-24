@@ -57,7 +57,7 @@ const makeYoutubeApiClient = Effect.gen(function*() {
       Effect.flatMap(decoder),
       Effect.catchTag("RequestError", (error) => Effect.fail(transformHttpError(error))),
       Effect.catchTag("ResponseError", (error) => Effect.fail(transformHttpError(error))),
-      withRetry(config),
+      withRetry,
     );
 
   // Single video operation

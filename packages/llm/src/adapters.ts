@@ -17,26 +17,3 @@ export const mapSpeaker = (speaker: string): SpeakerRole => {
   }
   return "guest";
 };
-
-export const toDomainTranscript = Schema.transform(
-  LLMTranscript,
-  Transcript,
-  (llmTranscript) => {
-    return {
-      id: "" as any,
-      jobId: "" as any,
-      rawText: llmTranscript.map((chunk) => chunk.dialogue).join("\n"),
-      turns: Array.map(llmTranscript, (chunk) => ({
-        timestamp: normalizeTimestamp(chunk.timestamp) as Timestamp,
-        speaker: mapSpeaker(chunk.speaker),
-        text: chunk.dialogue,
-      })),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-  },
-  () => {
-    // Not implemented
-    return [];
-  },
-);

@@ -44,8 +44,6 @@ README.md
 deploy.sh
 setup.sh
 migrate-from-ai-studio.sh
-cloudbuild.yaml
-Dockerfile
 .dockerignore
 app-structure-diagram.md
 

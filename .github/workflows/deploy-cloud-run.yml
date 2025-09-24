@@ -24,105 +24,76 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Setup Node.js and pnpm (fixed order)
-      - name: 🔧 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: 📦 Enable pnpm
+      - name: Enable pnpm
         run: |
-          echo "📦 Enabling pnpm..."
           corepack enable
           corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
           pnpm --version
 
-      # Step 3: Authenticate to Google Cloud
-      - name: 🔐 Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: ☁️ Setup Google Cloud SDK
+      - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # Step 4: Verify setup
-      - name: ✅ Verify setup
+      - name: Verify setup
         run: |
-          echo "🔍 Verifying environment setup..."
           echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
           echo "Region: ${REGION}"
           echo "Repository: ${REPOSITORY}"
           echo "Commit SHA: ${{ github.sha }}"
           gcloud config list
           gcloud artifacts repositories describe ${REPOSITORY} \
-            --location=${REGION} || echo "⚠️  Repository might not exist yet"
+            --location=${REGION} || echo "Repository might not exist yet"
 
-      # Step 5: Build and push container images
-      - name: 🏗️ Build and push container images
+      - name: Build and push container images
         run: |
-          echo "🏗️ Building container images..."
           set -euo pipefail
 
-          # Show what we're building
           echo "Images to build:"
           echo "  - api:${{ github.sha }}"
           echo "  - worker-metadata:${{ github.sha }}"
           echo "  - worker-transcription:${{ github.sha }}"
 
-          # Run Cloud Build
           gcloud builds submit \
             --config=cloudbuild.yaml \
             --substitutions=_REGION=${REGION},_REPOSITORY=${REPOSITORY},COMMIT_SHA=${{ github.sha }} \
             --project=${{ secrets.GCP_PROJECT_ID }}
 
-          echo "✅ Container images built successfully"
-
-      # Step 6: Setup Pulumi
-      - name: 🎯 Install Pulumi dependencies
+      - name: Install Pulumi dependencies
         working-directory: infra
         run: |
-          echo "📦 Installing infrastructure dependencies..."
           pnpm install --frozen-lockfile
-          echo "✅ Dependencies installed"
 
-      - name: 🔧 Setup Pulumi CLI
-        uses: pulumi/actions@v5
-        with:
-          command: version
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-
-      # Step 7: Configure Pulumi stack
-      - name: 📝 Configure Pulumi stack
+      - name: Configure Pulumi stack
         working-directory: infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "📝 Configuring Pulumi stack..."
-
-          # Login to Pulumi
           pulumi login
 
-          # Select stack
           pulumi stack select ${PULUMI_STACK} --non-interactive || {
-            echo "❌ Failed to select stack ${PULUMI_STACK}"
+            echo "Failed to select stack ${PULUMI_STACK}"
             echo "Available stacks:"
             pulumi stack ls
             exit 1
           }
 
-          # Set image configurations
-          echo "🖼️ Setting image configurations..."
           pulumi config set cloudrun:apiImage \
             ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/api:${IMAGE_TAG} \
             --stack ${PULUMI_STACK}
@@ -135,12 +106,9 @@ jobs:
             ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/worker-transcription:${IMAGE_TAG} \
             --stack ${PULUMI_STACK}
 
-          echo "✅ Stack configured"
-          echo "Current configuration:"
           pulumi config --show-secrets
 
-      # Step 8: Deploy infrastructure
-      - name: 🚀 Deploy infrastructure
+      - name: Deploy infrastructure
         uses: pulumi/actions@v5
         with:
           work-dir: infra
@@ -151,16 +119,15 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
 
-      # Step 9: Show deployment results
-      - name: 📊 Show deployment results
+      - name: Show deployment results
         if: success()
         working-directory: infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
-          echo "✅ Deployment successful!"
-          echo "📊 Stack outputs:"
+          echo "Deployment successful"
+          echo "Stack outputs:"
           pulumi stack output --json | jq '.'
           echo ""
-          echo "🔗 Service URLs:"
+          echo "Service URLs:"
           pulumi stack output --json | jq -r 'to_entries[] | select(.key | contains("url")) | "\(.key): \(.value)"'

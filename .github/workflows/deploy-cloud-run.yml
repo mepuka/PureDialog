@@ -111,12 +111,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v5
-        with:
-          command: version
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ env.PULUMI_ACCESS_TOKEN }}
-          PULUMI_CONFIG_PASSPHRASE: ""
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 
       - name: Update stack image tags
         working-directory: infra

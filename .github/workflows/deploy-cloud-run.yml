@@ -67,7 +67,7 @@ jobs:
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
       PULUMI_STACK: dev
       REGION: us-west1
-      REPOSITORY: pure-dialog-repo
+      REPOSITORY: puredialog
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

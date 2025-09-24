@@ -1,11 +1,10 @@
-export const version = "1.0.0";
+export declare const version = "1.0.0";
 export * from "./entities";
 export * from "./errors";
 export * from "./events";
 export * from "./ids";
-export * from "./media-resource-metadata";
 export * from "./media-resources";
+export * from "./media-resource-metadata";
 export * from "./requests";
 export * from "./status";
 export * from "./transcript";
-export * from "./types";

@@ -1,27 +1,31 @@
-import * as http from "node:http";
+import { HttpRouter, HttpServer, HttpServerRequest, HttpServerResponse } from "@effect/platform";
+import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
+import { CreateTranscriptionJobRequest } from "@puredialog/domain";
+import type { CreateTranscriptionJobRequest as CreateReq } from "@puredialog/domain";
+import { Effect, Layer } from "effect";
+import { createServer } from "node:http";
+
+const router = HttpRouter.empty.pipe(
+  HttpRouter.get("/health", HttpServerResponse.json({ status: "ok" })),
+  HttpRouter.post(
+    "/v1/transcription-jobs",
+    HttpServerRequest.schemaBodyJson(CreateTranscriptionJobRequest).pipe(
+      Effect.matchEffect({
+        onFailure: () => HttpServerResponse.json({ error: "invalid request" }, { status: 400 }),
+        onSuccess: (body: CreateReq) =>
+          HttpServerResponse.json(
+            { jobId: "pending", requestId: body.requestId },
+            { status: 202 },
+          ),
+      }),
+    ),
+  ),
+);
+
+const app = router.pipe(HttpServer.serve(), HttpServer.withLogAddress);
 
 const port = Number(process.env.PORT ?? 8080);
+const ServerLive = NodeHttpServer.layer(() => createServer(), { port });
+const Provided = app.pipe(Layer.provide(ServerLive));
 
-const server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
-  if (!req.url) {
-    res.writeHead(400, { "Content-Type": "application/json" }).end(
-      JSON.stringify({ error: "missing url" })
-    );
-    return;
-  }
-
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" }).end(
-      JSON.stringify({ status: "ok" })
-    );
-    return;
-  }
-
-  res.writeHead(200, { "Content-Type": "application/json" }).end(
-    JSON.stringify({ message: "PureDialog API placeholder" })
-  );
-});
-
-server.listen(port, () => {
-  console.log(`API service listening on port ${port}`);
-});
+NodeRuntime.runMain()(Layer.launch(Provided));

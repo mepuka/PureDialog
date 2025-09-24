@@ -7,7 +7,7 @@ export const YouTubeVideoId = Schema.String.pipe(
   Schema.minLength(11),
   Schema.maxLength(11),
   Schema.pattern(/^[a-zA-Z0-9_-]+$/),
-  Schema.brand("YouTubeVideoId")
+  Schema.brand("YouTubeVideoId"),
 );
 export type YouTubeVideoId = Schema.Schema.Type<typeof YouTubeVideoId>;
 
@@ -16,7 +16,7 @@ export const YouTubeChannelId = Schema.String.pipe(
   Schema.minLength(24),
   Schema.maxLength(24),
   Schema.pattern(/^UC[a-zA-Z0-9_-]+$/),
-  Schema.brand("YouTubeChannelId")
+  Schema.brand("YouTubeChannelId"),
 );
 export type YouTubeChannelId = Schema.Schema.Type<typeof YouTubeChannelId>;
 
@@ -30,7 +30,7 @@ export class YouTubeVideo extends Schema.Class<YouTubeVideo>("YouTubeVideo")({
   channelTitle: Schema.String,
   publishedAt: Schema.optional(Schema.String),
   language: Schema.optional(Schema.String).pipe(
-    Schema.withConstructorDefault(() => "en-US")
+    Schema.withConstructorDefault(() => "en-US"),
   ),
 }) {}
 
@@ -62,7 +62,7 @@ export class YouTubeChannelResource extends Schema.Class<YouTubeChannelResource>
 /** MediaResource as discriminated union with clean {type, data} structure. */
 export const MediaResource = Schema.Union(
   YouTubeVideoResource,
-  YouTubeChannelResource
+  YouTubeChannelResource,
   // Future: add other media types like Spotify, etc.
 );
 export type MediaResource = YouTubeVideoResource | YouTubeChannelResource;

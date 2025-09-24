@@ -122,7 +122,7 @@ export const DomainErrorSchema = Schema.Union(
   ConfigurationErrorSchema,
   ValidationErrorSchema,
   StreamingErrorSchema,
-  AuthorizationErrorSchema
+  AuthorizationErrorSchema,
 );
 
 export type DomainErrorSchema = Schema.Schema.Type<typeof DomainErrorSchema>;

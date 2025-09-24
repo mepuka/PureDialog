@@ -16,8 +16,8 @@
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
-      "@puredialog/domain": ["packages/domain/src/index"],
-      "@puredialog/domain/*": ["packages/domain/src/*"],
+      "@puredialog/domain": ["packages/domain/dist/index"],
+      "@puredialog/domain/*": ["packages/domain/dist/*"],
       "@effect/schema": ["packages/domain/node_modules/@effect/schema/dist/esm/index"],
       "@effect/schema/*": ["packages/domain/node_modules/@effect/schema/dist/esm/*"],
       "@effect/schema/Schema": ["packages/domain/node_modules/@effect/schema/dist/esm/Schema"]

@@ -18,7 +18,7 @@ jobs:
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      PULUMI_STACK: dev
+      PULUMI_STACK: mepuka-org/pure-dialog-infra/dev
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
         uses: pulumi/actions@v5
         with:
           work-dir: infra
-          stack-name: dev
+          stack-name: ${{ env.PULUMI_STACK }}
           command: up
           args: --yes
           comment-on-pr: false
@@ -65,7 +65,7 @@ jobs:
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      PULUMI_STACK: dev
+      PULUMI_STACK: mepuka-org/pure-dialog-infra/dev
       REGION: us-west1
       REPOSITORY: puredialog
     steps:
@@ -119,19 +119,19 @@ jobs:
         working-directory: infra
         env:
           IMAGE_TAG: ${{ github.sha }}
+          PULUMI_CONFIG_PASSPHRASE: ""
         run: |
           set -euo pipefail
-          pulumi login
-          pulumi stack select mepuka-org/pure-dialog-infra/${PULUMI_STACK} --non-interactive
-          pulumi config set cloudrun:apiImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/api:${IMAGE_TAG} --non-interactive
-          pulumi config set cloudrun:metadataImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/worker-metadata:${IMAGE_TAG} --non-interactive
-          pulumi config set cloudrun:transcriptionImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/worker-transcription:${IMAGE_TAG} --non-interactive
+          pulumi login --cloud-url https://api.pulumi.com
+          pulumi config set cloudrun:apiImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/api:${IMAGE_TAG} --stack ${PULUMI_STACK} --non-interactive
+          pulumi config set cloudrun:metadataImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/worker-metadata:${IMAGE_TAG} --stack ${PULUMI_STACK} --non-interactive
+          pulumi config set cloudrun:transcriptionImage ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/worker-transcription:${IMAGE_TAG} --stack ${PULUMI_STACK} --non-interactive
 
       - name: Deploy updated services
         uses: pulumi/actions@v5
         with:
           work-dir: infra
-          stack-name: mepuka-org/pure-dialog-infra/dev
+          stack-name: ${{ env.PULUMI_STACK }}
           command: up
           args: --yes
           comment-on-pr: false

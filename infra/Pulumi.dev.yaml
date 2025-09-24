@@ -3,7 +3,7 @@ config:
   gcp:region: us-west1
   cloudrun:serviceAccount: 211636922435-compute@developer.gserviceaccount.com
   cloudrun:apiServiceName: api
-  cloudrun:apiImage: us-west1-docker.pkg.dev/gen-lang-client-0874846742/pure-dialog-repo/pure-dialog:latest
+  cloudrun:apiImage: us-west1-docker.pkg.dev/gen-lang-client-0874846742/puredialog-repo/pure-dialog:latest
   cloudrun:metadataServiceName: worker-metadata
   cloudrun:metadataImage: us-west1-docker.pkg.dev/gen-lang-client-0874846742/pure-dialog-repo/pure-dialog:latest
   cloudrun:transcriptionServiceName: worker-transcription

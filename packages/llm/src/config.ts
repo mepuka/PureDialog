@@ -8,7 +8,7 @@ export const GeminiConfig = Config.all({
   temperature: Config.number("GEMINI_TEMPERATURE").pipe(
     Config.withDefault(0.0)
   ),
-  timeout: Config.number("GEMINI_TIMEOUT").pipe(
+  timeout: Config.number("GEMINI_TIMEOUT_").pipe(
     Config.withDefault(30000)
   ),
   maxRetries: Config.number("GEMINI_MAX_RETRIES").pipe(

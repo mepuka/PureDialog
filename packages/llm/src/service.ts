@@ -1,38 +1,55 @@
-import type { AiError, LanguageModel } from "@effect/ai/index"
-import type { DialogueTurn, MediaMetadata, Speaker, YouTubeChannel, YouTubeVideo } from "@puredialog/domain"
-import type { Config, Effect } from "effect"
-import { Context, Layer } from "effect"
-import type { ConfigError } from "effect/ConfigError"
-import type { ParseError } from "effect/ParseResult"
-import type { GoogleApiError, TranscriptionError } from "./errors.js"
-import type { PodcastSpeakerMetadata } from "./prompts/extract_media_metadata.js"
-import { extractMediaMetadata } from "./prompts/extract_media_metadata.js"
-import { transcribeMedia } from "./prompts/transcribe_media.js"
+import type { DialogueTurn, MediaMetadata, YouTubeVideo } from "@puredialog/domain"
+import { Chunk, Console, Context, Effect, Layer, Option, Stream } from "effect"
+import { LLMAdapter, LLMAdapterLive } from "./adapters.js"
+import { GeminiClient, GeminiClientLive } from "./client.js"
+import type { LLMError } from "./errors.js"
 
-export interface LLMService {
-  readonly extractMetadata: (
-    video: YouTubeVideo,
-    host: Speaker,
-    channel?: YouTubeChannel
-  ) => Effect.Effect<PodcastSpeakerMetadata, AiError.AiError, LanguageModel.LanguageModel>
+// 2. Define the service tag
+export class LLMService extends Context.Tag("@puredialog/llm/LLMService")<
+  LLMService,
+  {
+    readonly transcribeMedia: (
+      video: YouTubeVideo,
+      metadata: MediaMetadata
+    ) => Effect.Effect<ReadonlyArray<DialogueTurn>, LLMError>
+  }
+>() {}
 
-  readonly transcribeMedia: (
+// 3. Implement the service
+const makeLLMService = Effect.gen(function*() {
+  const client = yield* GeminiClient
+  const adapter = yield* LLMAdapter
+
+  const transcribeMedia = (
     video: YouTubeVideo,
     metadata: MediaMetadata
-  ) => Effect.Effect<
-    ReadonlyArray<DialogueTurn>,
-    GoogleApiError | ConfigError | TranscriptionError | ParseError,
-    Config.Config<string>
-  >
-}
+  ) =>
+    Effect.gen(function*() {
+      const rawOutputStream = (yield* client.transcribeYoutubeVideo({
+        video,
+        mediaMetadata: metadata
+      })).pipe(
+        Stream.tap((chunk) =>
+          chunk.pipe(Option.match(
+            { onSome: (chunk) => Console.log(chunk), onNone: () => Console.log("No chunk") }
+          ))
+        )
+      )
+      const rawOutput = (yield* Stream.runCollect(rawOutputStream)).pipe(Chunk.compact)
+      const turns = yield* adapter.toDomainTranscript(rawOutput)
+      return turns
+    }).pipe(Effect.withSpan("LLMService.transcribeMedia"))
 
-export const LLMService = Context.GenericTag<LLMService>("@puredialog/llm/LLMService")
-
-export const LLMServiceLive = Layer.succeed(
-  LLMService,
-  LLMService.of({
-    extractMetadata: (video: YouTubeVideo, host: Speaker, channel?: YouTubeChannel) =>
-      extractMediaMetadata(video, host, channel),
-    transcribeMedia: (video: YouTubeVideo, metadata: MediaMetadata) => transcribeMedia(video, metadata)
+  return LLMService.of({
+    transcribeMedia
   })
+})
+
+// 4. Compose the final layer
+const LayerLLMService = Layer.effect(LLMService, makeLLMService)
+
+const LLMServiceDeps = Layer.merge(GeminiClientLive, LLMAdapterLive)
+
+export const LLMServiceLive = LayerLLMService.pipe(
+  Layer.provide(LLMServiceDeps)
 )

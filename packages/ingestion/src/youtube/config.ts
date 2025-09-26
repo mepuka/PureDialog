@@ -17,7 +17,7 @@ export class YoutubeConfig extends Context.Tag("YoutubeConfig")<
 const YoutubeConfigSchema = {
   apiKey: Config.redacted("YOUTUBE_API_KEY"),
   baseUrl: Config.string("YOUTUBE_API_BASE_URL").pipe(
-    Config.withDefault("https://www.googleapis.com/youtube/v3")
+    Config.withDefault("https://youtube.googleapis.com/youtube/v3")
   ),
   timeout: Config.duration("YOUTUBE_API_TIMEOUT").pipe(
     Config.withDefault(Duration.seconds(30))

@@ -10,10 +10,12 @@ export const makeApiRequest = (
   HttpClientRequest.get(`${config.baseUrl}/${endpoint}`).pipe(
     HttpClientRequest.setHeaders({
       Accept: "application/json",
-      "User-Agent": "PureDialog-YouTube-Client/1.0",
-      Authorization: `Bearer ${config.apiKey}`
+      "User-Agent": "PureDialog-YouTube-Client/1.0"
     }),
-    HttpClientRequest.appendUrlParams(params)
+    HttpClientRequest.appendUrlParams({
+      ...params,
+      key: config.apiKey
+    })
   )
 
 export const makeVideoRequest = (ids: Array<VideoId>, config: YoutubeConfigInterface) =>

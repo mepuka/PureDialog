@@ -74,7 +74,7 @@ const fromYouTubeApiVideo = Schema.transformOrFail(
         id: youtubeVideo.id,
         snippet: {
           title: youtubeVideo.title,
-          description: youtubeVideo.description ?? "",
+          description: youtubeVideo.description ?? null,
           channelId: youtubeVideo.channelId || null,
           channelTitle: youtubeVideo.channelTitle || null,
           tags: youtubeVideo.tags as unknown as Array<string>,

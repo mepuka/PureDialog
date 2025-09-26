@@ -1,6 +1,7 @@
 import { Schema } from "effect"
+import { TranscriptionContext } from "./context.js"
 import { JobId, RequestId, TranscriptId } from "./ids.js"
-import { MediaResource } from "./media-resources.js"
+import { MediaResource } from "./media.js"
 import { JobStatus } from "./status.js"
 
 // --- TranscriptionJob & Status ---
@@ -15,6 +16,8 @@ export class TranscriptionJob extends Schema.Class<TranscriptionJob>("Transcript
   updatedAt: Schema.Date,
   transcriptId: Schema.optional(TranscriptId),
   error: Schema.optional(Schema.String),
+  // NEW: Context field for user-provided information
+  transcriptionContext: Schema.optional(TranscriptionContext),
   metadata: Schema.optional(Schema.Struct({
     priority: Schema.optional(Schema.String)
   }))

@@ -8,6 +8,7 @@
 - [ ] 05 - Security, Auth & Rate Limiting (`./05-security-auth-rate-limiting/instructions.md`)
 - [ ] 06 - Domain Models Overview (`./06-domain-models-overview/instructions.md`)
 - [ ] Architecture Review (`./architecture-review.md`)
+- [x] **Phase 1 Testing** - Comprehensive test suite for domain validation and YouTube adapter (113/114 tests passing)
 - [ ] **ingestion-pub-sub** - Effect-based Pub/Sub client for ingestion job orchestration
 
 

@@ -1,20 +1,23 @@
 {
   "name": "@puredialog/domain",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "The domain for Pure Dialog",
+  "exports": {
+    ".": {
+      "types": "./build/dts/index.d.ts",
+      "module": "./build/esm/index.js",
+      "default": "./build/esm/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsc -b tsconfig.build.json",
+    "check": "tsc -b tsconfig.json",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "effect": "^3.16.16"
-  },
-  "devDependencies": {
-    "typescript": "~5.8.2"
+    "@effect/platform": "latest",
+    "effect": "latest"
   }
 }

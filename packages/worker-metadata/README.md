@@ -1,0 +1,1 @@
+Worker metadata package for Pure Dialog

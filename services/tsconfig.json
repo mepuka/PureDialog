@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "../../packages/services/transcription/src",
-    "outDir": "../../packages/services/transcription/dist",
-    "declaration": true
-  },
-  "include": ["../../packages/services/transcription/src/**/*"]
-}

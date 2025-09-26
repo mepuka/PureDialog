@@ -1,5 +1,5 @@
-import { Schema } from "effect";
-import { RequestId } from "./ids";
+import { Schema } from "effect"
+import { RequestId } from "./ids.js"
 
 /** Specifies a resource to be processed from input text. */
 export const ResourceRequest = Schema.Struct({
@@ -8,9 +8,9 @@ export const ResourceRequest = Schema.Struct({
   /** Optional specific identifier if known (e.g., video ID) */
   resourceId: Schema.optional(Schema.String),
   /** Optional additional processing options */
-  options: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
-});
-export type ResourceRequest = Schema.Schema.Type<typeof ResourceRequest>;
+  options: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Unknown }))
+})
+export type ResourceRequest = Schema.Schema.Type<typeof ResourceRequest>
 
 /** Request to create a new transcription job. */
 export const CreateTranscriptionJobRequest = Schema.Struct({
@@ -19,8 +19,8 @@ export const CreateTranscriptionJobRequest = Schema.Struct({
   /** Non-empty text input containing resource references */
   inputText: Schema.String.pipe(Schema.nonEmptyString()),
   /** Resources to extract and process from the input text */
-  resources: Schema.Array(ResourceRequest).pipe(Schema.minItems(1)),
-});
+  resources: Schema.Array(ResourceRequest).pipe(Schema.minItems(1))
+})
 export type CreateTranscriptionJobRequest = Schema.Schema.Type<
   typeof CreateTranscriptionJobRequest
->;
+>

@@ -1,0 +1,38 @@
+{
+  "name": "@puredialog/worker-metadata",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "The worker metadata for Pure Dialog",
+  "exports": {
+    ".": {
+      "types": "./build/dts/index.d.ts",
+      "module": "./build/esm/index.js",
+      "default": "./build/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "check": "tsc -b tsconfig.json",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@effect/platform": "latest",
+    "@effect/sql": "latest",
+    "effect": "latest",
+    "@puredialog/domain": "workspace:^"
+  },
+  "effect": {
+    "generateExports": {
+      "include": [
+        "**/*.ts"
+      ]
+    },
+    "generateIndex": {
+      "include": [
+        "**/*.ts"
+      ]
+    }
+  }
+}

@@ -1,11 +1,11 @@
-import { Schema } from "effect";
-import { JobId, TranscriptId, RequestId } from "./ids";
-import { MediaResource } from "./media-resources";
-import { JobStatus } from "./status";
+import { Schema } from "effect"
+import { JobId, RequestId, TranscriptId } from "./ids.js"
+import { MediaResource } from "./media-resources.js"
+import { JobStatus } from "./status.js"
 
 // --- TranscriptionJob & Status ---
 /** The main entity representing the transcription work to be done. */
-export const TranscriptionJob = Schema.Struct({
+export class TranscriptionJob extends Schema.Class<TranscriptionJob>("TranscriptionJob")({
   id: JobId,
   requestId: RequestId,
   media: MediaResource,
@@ -15,5 +15,7 @@ export const TranscriptionJob = Schema.Struct({
   updatedAt: Schema.Date,
   transcriptId: Schema.optional(TranscriptId),
   error: Schema.optional(Schema.String),
-});
-export type TranscriptionJob = Schema.Schema.Type<typeof TranscriptionJob>;
+  metadata: Schema.optional(Schema.Struct({
+    priority: Schema.optional(Schema.String)
+  }))
+}) {}

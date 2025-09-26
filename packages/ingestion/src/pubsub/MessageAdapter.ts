@@ -1,27 +1,14 @@
-import {
-  DomainEvent as DomainEventSchema,
-  JobId,
-  RequestId,
-  TranscriptionJob as TranscriptionJobSchema,
-} from "@puredialog/domain";
-import { ParseResult } from "effect";
-import { Schema } from "effect";
-import { Effect, Match } from "effect";
-import { buildAttributes } from "./Config.js";
-import { MessageEncodingError } from "./errors.js";
-import type { PubSubEventType, PubSubMessage } from "./Types.js";
-import {
-  JobFailedEventType,
-  JobQueuedEventType,
-  JobStatusChangedEventType,
-  TranscriptCompleteEventType,
-  WorkMessageEventType,
-} from "./Types.js";
+import type { JobId, RequestId } from "@puredialog/domain"
+import { DomainEvent as DomainEventSchema, TranscriptionJob as TranscriptionJobSchema } from "@puredialog/domain"
+import { Effect, Match, ParseResult, Schema } from "effect"
+import { buildAttributes } from "./Config.js"
+import { MessageEncodingError } from "./errors.js"
+import type { PubSubMessage } from "./Types.js"
 
-type AnySchema = Schema.Schema.Any;
+type AnySchema = Schema.Schema.Any
 
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 
 const Utf8Bytes = Schema.transformOrFail(
   Schema.String,
@@ -29,35 +16,21 @@ const Utf8Bytes = Schema.transformOrFail(
   {
     strict: true,
     decode: (value) => ParseResult.succeed(textEncoder.encode(value)),
-    encode: (value) => ParseResult.succeed(textDecoder.decode(value)),
-  },
-);
+    encode: (value) => ParseResult.succeed(textDecoder.decode(value))
+  }
+)
 
-export const CURRENT_SCHEMA_VERSION = "1" as const;
-
-export type DomainEvent = Schema.Schema.Type<typeof DomainEventSchema>;
-export type TranscriptionJob = Schema.Schema.Type<typeof TranscriptionJobSchema>;
-export type JobIdType = Schema.Schema.Type<typeof JobId>;
-export type RequestIdType = Schema.Schema.Type<typeof RequestId>;
-
-export interface EncodeEventOptions {
-  readonly correlationId?: string;
-  readonly schemaVersion?: string;
-  readonly mediaType?: string;
-}
-
-export interface EncodeWorkOptions {
-  readonly correlationId?: string;
-  readonly schemaVersion?: string;
-  readonly stageOverride?: string;
-}
+type DomainEvent = Schema.Schema.Type<typeof DomainEventSchema>
+type TranscriptionJob = Schema.Schema.Type<typeof TranscriptionJobSchema>
+type JobIdType = Schema.Schema.Type<typeof JobId>
+type RequestIdType = Schema.Schema.Type<typeof RequestId>
 
 const toBuffer = (value: unknown): Effect.Effect<Buffer, MessageEncodingError> =>
   Schema.encode(Schema.parseJson())(value).pipe(
     Effect.mapError((cause) =>
       new MessageEncodingError({
         message: "Failed to stringify payload",
-        context: { cause },
+        context: { cause }
       })
     ),
     Effect.flatMap((json) =>
@@ -65,23 +38,20 @@ const toBuffer = (value: unknown): Effect.Effect<Buffer, MessageEncodingError> =
         Effect.mapError((cause) =>
           new MessageEncodingError({
             message: "Failed to encode UTF-8 bytes",
-            context: { cause },
+            context: { cause }
           })
-        ),
+        )
       )
     ),
-    Effect.map((bytes) => Buffer.from(bytes)),
-  );
+    Effect.map((bytes) => Buffer.from(bytes))
+  )
 
-const fromBuffer = <S extends AnySchema>(
-  schema: S,
-  data: Buffer,
-) =>
+const fromBuffer = <S extends AnySchema>(schema: S, data: Buffer) =>
   Schema.encode(Utf8Bytes)(data).pipe(
     Effect.mapError((cause) =>
       new MessageEncodingError({
         message: "Failed to decode UTF-8 bytes",
-        context: { cause },
+        context: { cause }
       })
     ),
     Effect.flatMap((json) =>
@@ -89,9 +59,9 @@ const fromBuffer = <S extends AnySchema>(
         Effect.mapError((cause) =>
           new MessageEncodingError({
             message: "Failed to parse JSON from buffer",
-            context: { cause },
+            context: { cause }
           })
-        ),
+        )
       )
     ),
     Effect.flatMap((payload) =>
@@ -99,136 +69,68 @@ const fromBuffer = <S extends AnySchema>(
         Effect.mapError((cause) =>
           new MessageEncodingError({
             message: "Failed to decode payload using schema",
-            context: { cause },
+            context: { cause }
           })
-        ),
+        )
       )
-    ),
-  );
+    )
+  )
 
-const encodeWithSchema = <S extends AnySchema>(
-  schema: S,
-  value: Schema.Schema.Type<S>,
-) =>
+const encodeWithSchema = <S extends AnySchema>(schema: S, value: Schema.Schema.Type<S>) =>
   Schema.encode(schema)(value).pipe(
     Effect.mapError((cause) =>
       new MessageEncodingError({
         message: "Failed to encode value using schema",
-        context: { cause },
+        context: { cause }
       })
     ),
-    Effect.flatMap(toBuffer),
-  );
-interface EventContext {
-  readonly jobId: JobIdType;
-  readonly requestId: RequestIdType;
-  readonly mediaType: string;
-  readonly stage: string;
-  readonly eventType: PubSubEventType;
-}
+    Effect.flatMap(toBuffer)
+  )
 
-const eventContext = (
-  event: DomainEvent,
-  options: EncodeEventOptions,
-): Effect.Effect<EventContext, MessageEncodingError> => {
-  const base = Match.value(event).pipe(
-    Match.tag("JobQueued", (queued) => ({
-      eventType: JobQueuedEventType({}),
-      jobId: queued.job.id,
-      requestId: queued.job.requestId,
-      stage: "Queued",
-      mediaType: queued.job.media.type,
-    })),
-    Match.tag("JobFailed", (failed) => ({
-      eventType: JobFailedEventType({}),
-      jobId: failed.jobId,
-      requestId: failed.requestId,
-      stage: "Failed",
-      mediaType: options.mediaType,
-    })),
-    Match.tag("TranscriptComplete", (complete) => ({
-      eventType: TranscriptCompleteEventType({}),
-      jobId: complete.jobId,
-      requestId: complete.requestId,
-      stage: "Completed",
-      mediaType: options.mediaType,
-    })),
-    Match.tag("JobStatusChanged", (changed) => ({
-      eventType: JobStatusChangedEventType({}),
-      jobId: changed.jobId,
-      requestId: changed.requestId,
-      stage: changed.to,
-      mediaType: options.mediaType,
-    })),
-    Match.exhaustive,
-  );
+const domainEventAttributes = (event: DomainEvent): { readonly jobId: JobIdType; readonly requestId: RequestIdType } =>
+  Match.value(event).pipe(
+    Match.tag("JobQueued", ({ job }) => ({ jobId: job.id, requestId: job.requestId })),
+    Match.tag("JobFailed", ({ jobId, requestId }) => ({ jobId, requestId })),
+    Match.tag("TranscriptComplete", ({ jobId, requestId }) => ({ jobId, requestId })),
+    Match.tag("JobStatusChanged", ({ jobId, requestId }) => ({ jobId, requestId })),
+    Match.tag("WorkMessage", ({ job }) => ({ jobId: job.id, requestId: job.requestId })),
+    Match.exhaustive
+  )
 
-  if (!base.mediaType) {
-    return Effect.fail(
-      new MessageEncodingError({
-        message: "Media type is required for event",
-        context: { eventType: base.eventType._tag },
-      }),
-    );
-  }
+const formatJobId = (jobId: JobIdType) => `${jobId}`
+const formatRequestId = (requestId: RequestIdType) => `${requestId}`
 
-  return Effect.succeed({
-    jobId: base.jobId,
-    requestId: base.requestId,
-    stage: base.stage,
-    mediaType: base.mediaType,
-    eventType: base.eventType,
-  });
-};
+export const encodeDomainEvent = (event: DomainEvent) =>
+  encodeWithSchema(DomainEventSchema, event).pipe(
+    Effect.map((data): PubSubMessage => {
+      const attributes = domainEventAttributes(event)
+      return {
+        data,
+        attributes: {
+          ...buildAttributes({
+            jobId: formatJobId(attributes.jobId),
+            requestId: formatRequestId(attributes.requestId)
+          }),
+          eventType: event._tag
+        }
+      }
+    })
+  )
 
-const resolveSchemaVersion = (override?: string) => override ?? CURRENT_SCHEMA_VERSION;
-
-export const encodeDomainEvent = (
-  event: DomainEvent,
-  options: EncodeEventOptions = {},
-) =>
-  eventContext(event, options).pipe(
-    Effect.flatMap((context) =>
-      encodeWithSchema(DomainEventSchema, event).pipe(
-        Effect.map((data): PubSubMessage => ({
-          data,
-          attributes: {
-            ...buildAttributes({
-              jobId: context.jobId,
-              requestId: context.requestId,
-              mediaType: context.mediaType,
-              stage: context.stage,
-              schemaVersion: resolveSchemaVersion(options.schemaVersion),
-              correlationId: options.correlationId,
-            }),
-            eventType: context.eventType._tag,
-          },
-        })),
-      )
-    ),
-  );
-
-export const encodeWorkMessage = (
-  job: TranscriptionJob,
-  options: EncodeWorkOptions = {},
-) =>
+export const encodeWorkMessage = (job: TranscriptionJob) =>
   encodeWithSchema(TranscriptionJobSchema, job).pipe(
     Effect.map((data): PubSubMessage => ({
       data,
       attributes: {
         ...buildAttributes({
-          jobId: job.id,
-          requestId: job.requestId,
-          mediaType: job.media.type,
-          stage: options.stageOverride ?? job.status,
-          schemaVersion: resolveSchemaVersion(options.schemaVersion),
-          correlationId: options.correlationId,
+          jobId: formatJobId(job.id),
+          requestId: formatRequestId(job.requestId)
         }),
-        eventType: WorkMessageEventType({})._tag,
-      },
-    })),
-  );
+        eventType: "WorkMessage"
+      }
+    }))
+  )
 
-export const decodeDomainEvent = (message: PubSubMessage) => fromBuffer(DomainEventSchema, message.data);
+export const decodeDomainEvent = (message: PubSubMessage) => fromBuffer(DomainEventSchema, message.data)
 
-export const decodeWorkMessage = (message: PubSubMessage) => fromBuffer(TranscriptionJobSchema, message.data);
+export const decodeWorkMessage = (message: PubSubMessage) => fromBuffer(TranscriptionJobSchema, message.data)

@@ -5,8 +5,12 @@ node_modules/
 
 # Production build
 /dist
-/build
+/build/**
+.build/**
+build.tsbuildinfo
 
+/packages/**/build/**
+/packages/**/dist/**
 # Environment variables
 .env
 .env.local

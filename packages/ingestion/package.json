@@ -1,27 +1,40 @@
 {
   "name": "@puredialog/ingestion",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "description": "The ingestion for Pure Dialog",
+  "exports": {
+    ".": {
+      "types": "./build/dts/index.d.ts",
+      "module": "./build/esm/index.js",
+      "default": "./build/esm/index.js"
+    }
+  },
   "scripts": {
-    "dev": "node --watch dist/index.js",
-    "build": "tsc -p tsconfig.json",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "node dist/index.js"
+    "build": "tsc -b tsconfig.build.json",
+    "check": "tsc -b tsconfig.json",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@effect/platform": "^0.88.2",
-    "@effect/platform-node": "^0.91.0",
-    "@google-cloud/pubsub": "^4.7.0",
-    "@googleapis/youtube": "^29.0.0",
-    "@puredialog/domain": "workspace:*",
-    "effect": "^3.16.16"
+    "@effect/platform": "latest",
+    "@effect/platform-node": "latest",
+    "@puredialog/domain": "workspace:^",
+    "@google-cloud/pubsub": "latest",
+    "@googleapis/youtube": "latest",
+    "effect": "latest"
   },
-  "devDependencies": {
-    "typescript": "~5.8.2"
+  "effect": {
+    "generateExports": {
+      "include": [
+        "**/*.ts"
+      ]
+    },
+    "generateIndex": {
+      "include": [
+        "**/*.ts"
+      ]
+    }
   }
 }

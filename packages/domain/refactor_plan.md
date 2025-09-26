@@ -1,13 +1,13 @@
-# Domain Package Refactoring Plan
+# Domain Package Refactoring Plan (Revised)
 
-This document outlines a plan to refactor the `domain` package for better organization, clarity, and robustness.
+This document outlines a plan to refactor the `domain` package for better organization, clarity, and robustness, incorporating feedback on domain modeling.
 
 ## 1. High-Level Goals
 
 *   **Improve File/Folder Organization:** Structure files based on their concern (schemas, types, errors) to make the domain easier to navigate and understand.
+*   **Clarify Domain Concepts:** Introduce a `TranscriptionContext` to distinguish between *a priori* information and extracted metadata, and formalize the contracts for transcription and feedback.
 *   **Consolidate and Simplify Schemas:** Reduce redundancy and improve the composition of schemas.
-*   **Enhance Type Safety:** Introduce more specific and robust types where possible.
-*   **Decouple Schemas from Types:** Separate the `Schema` definitions from the plain TypeScript `type` and `class` definitions.
+*   **Decouple Domain Concerns:** Ensure entities like `Transcript` and `Feedback` are disaggregated, with relationships handled by reference (ID) rather than embedding.
 
 ## 2. Proposed File/Folder Structure
 
@@ -18,108 +18,140 @@ The current flat structure will be reorganized into the following:
 ├───index.ts
 ├───errors/
 │   ├───index.ts
-│   ├───definitions.ts       // TaggedError class definitions
-│   └───schemas.ts           // Schema definitions for errors
+│   ├───definitions.ts
+│   └───schemas.ts
 ├───schemas/
 │   ├───index.ts
+│   ├───context.ts
 │   ├───entities.ts
 │   ├───events.ts
+│   ├───feedback.ts
 │   ├───ids.ts
-│   ├───media.ts             // Consolidated media-resource and metadata
+│   ├───inference.ts
+│   ├───media.ts
+│   ├───prompts.ts
 │   ├───requests.ts
 │   ├───responses.ts
+│   ├───speakers.ts
 │   ├───status.ts
 │   └───transcript.ts
 └───types/
-    ├───index.ts
-    ├───entities.ts
-    ├───events.ts
-    ├───ids.ts
-    ├───media.ts
-    ├───requests.ts
-    ├───responses.ts
-    ├───status.ts
-    └───transcript.ts
+    └───... (mirroring the schemas structure)
 ```
 
-**Action Items:**
+## 3. Core Schema and Type Refactoring
 
-1.  Create the new directories: `errors`, `schemas`, `types`.
-2.  Move existing files into the appropriate new directories.
-3.  Create `index.ts` files within each new directory to export their contents.
-4.  Update the root `index.ts` to re-export from the new sub-directories.
+### 3.1. New Domain Concept: `TranscriptionContext`
 
-## 3. Schema and Type Refactoring
-
-### 3.1. Media Resources and Metadata (`media-resources.ts`, `media-resource-metadata.ts` -> `schemas/media.ts`, `types/media.ts`)
-
-**Problem:** `MediaMetadata` is tightly coupled to `MediaResource`, and the distinction between `YouTubeVideoResource` and `YouTubeChannelResource` adds boilerplate. The `Speaker` schema is also located in `media-resource-metadata.ts` but is conceptually a top-level entity.
+**Problem:** The domain model doesn't distinguish between information known *before* processing a media file and metadata extracted *from* it.
 
 **Plan:**
 
-1.  **Move `Speaker`:** Move the `Speaker` schema and type to their own files, `schemas/speaker.ts` and `types/speaker.ts`. This will also require creating a `speakers.ts` file and moving `SpeakerRole` into it.
-2.  **Consolidate Media Schemas:** Create `schemas/media.ts`.
-    *   Merge `media-resource-metadata.ts` and `media-resources.ts` into this new file.
-    *   Redefine `MediaResource` to be a more generic, discriminated union. Instead of separate classes for `YouTubeVideoResource` and `YouTubeChannelResource`, create a single `MediaResource` schema with a `type` discriminator.
-    *   The `MediaMetadata` will be a separate, composable schema that is included in the `MediaResource`.
-3.  **Create Media Types:** Create `types/media.ts` with the corresponding TypeScript types.
+1.  **Introduce `TranscriptionContext`:** Create a schema in `schemas/context.ts` to serve as a "template" for a transcription job, based on user input.
+2.  **Update `CreateTranscriptionJobRequest`:** This request object in `schemas/requests.ts` will now require the `TranscriptionContext`.
 
-**Example of new `MediaResource` schema:**
+### 3.2. Media Resources and Metadata
+
+**Problem:** `MediaMetadata` is overloaded, mixing contextual information with extracted data.
+
+**Plan:**
+
+1.  **Separate `Speaker`:** Move `SpeakerRole` and `Speaker` definitions into `schemas/speakers.ts`.
+2.  **Redefine `MediaMetadata`:** In `schemas/media.ts`, `MediaMetadata` will now strictly represent data *extracted* from a source (e.g., YouTube API).
+3.  **Refine `TranscriptionJob`:** The `TranscriptionJob` entity in `schemas/entities.ts` will hold both the initial `TranscriptionContext` and the eventual `MediaMetadata` as separate fields.
+
+### 3.3. Transcript (`transcript.ts`)
+
+**Plan:**
+
+1.  **Retain `TimestampString`:** The `HH:MM:SS` string format is a requirement for the transcription prompt and will be kept.
+2.  **Remove `TranscriptSegment`:** This is a duplicate of `DialogueTurn` and will be removed.
+3.  **Relocate `ModelOutputChunk`:** This DTO will be moved to the `llm` package.
+
+## 4. Broader Domain Model Enhancements
+
+### 4.1. Formalizing Transcription Service Contracts
+
+**Plan:**
+
+1.  **Define `TranscriptionServiceRequest`:** In `schemas/requests.ts`, create a schema that bundles all necessary information to start a transcription.
+2.  **Define `TranscriptionServiceResponse`:** In `schemas/responses.ts`, create a schema for the LLM's output.
+
+### 4.2. Capturing Inference and Prompt Details
+
+**Problem:** The final `Transcript` doesn't record which prompt or model configuration was used to generate it, which is critical for reproducibility.
+
+**Plan:**
+
+1.  **Create `InferenceConfig` Schema:** In `schemas/inference.ts`, define the configuration used for an LLM generation.
+
+    ```typescript
+    export const InferenceConfig = Schema.Struct({
+      model: Schema.String,
+      temperature: Schema.Number
+    });
+    ```
+
+2.  **Create `GenerationPrompt` Schema:** In `schemas/prompts.ts`, define a schema to track the exact, dynamically compiled prompt used for generation.
+
+    ```typescript
+    export const GenerationPrompt = Schema.Struct({
+      // Identifies the base template used for compilation
+      templateId: Schema.String,
+      // The final, full prompt text sent to the LLM
+      compiledText: Schema.String
+    });
+    ```
+
+### 4.3. Decoupling Quality and Feedback Mechanisms
+
+**Problem:** There is no formal way to capture user feedback for a transcript, and it should not be directly embedded in the `Transcript` object.
+
+**Plan:**
+
+1.  **Define `TranscriptionFeedback` as a Standalone Entity:** In `schemas/feedback.ts`, define a schema for capturing user-submitted ratings. This entity is explicitly *not* part of the `Transcript` but references it by ID, maintaining a clean separation of concerns.
+
+    ```typescript
+    export const TranscriptionFeedback = Schema.Struct({
+      transcriptId: TranscriptId, // Links to the transcript
+      rating: Schema.Int.pipe(Schema.between(1, 5)),
+      suggestedCorrections: Schema.optional(Schema.Array(DialogueTurn)),
+      comments: Schema.optional(Schema.String),
+      submittedAt: Schema.Date
+    });
+    ```
+
+### 4.4. Updating the `Transcript` Entity
+
+**Plan:** The `Transcript` schema in `schemas/transcript.ts` will be updated to be a clean, disaggregated entity focused on the generated output and its direct context.
 
 ```typescript
-// In schemas/media.ts
-export const MediaResource = Schema.Union(
-  Schema.Struct({
-    type: Schema.Literal("youtube_video"),
-    id: MediaResourceId,
-    metadata: MediaMetadata,
-    data: YouTubeVideo
-  }),
-  Schema.Struct({
-    type: Schema.Literal("youtube_channel"),
-    id: MediaResourceId,
-    metadata: MediaMetadata,
-    data: YouTubeChannel
-  })
-);
+export const Transcript = Schema.Struct({
+  id: TranscriptId,
+  jobId: JobId,
+  mediaResource: MediaResource,
+  rawText: Schema.String.pipe(Schema.nonEmptyString()),
+  turns: Schema.Array(DialogueTurn),
+  // New fields for traceability
+  inferenceConfig: InferenceConfig,
+  prompt: GenerationPrompt, // The exact prompt used
+  createdAt: Schema.Date,
+  updatedAt: Schema.Date
+});
 ```
 
-### 3.2. Transcript (`transcript.ts`)
+## 5. Deletions and Consolidations
 
-**Problem:** `DialogueTurn` and `TranscriptSegment` are identical. `ModelOutputChunk` is a DTO and does not belong in the core domain.
-
-**Plan:**
-
-1.  **Remove `TranscriptSegment`:** It is redundant. Use `DialogueTurn` everywhere.
-2.  **Relocate `ModelOutputChunk`:** Move `ModelOutputChunk` to the `llm` package, as it represents the data structure coming from the language model, not a core domain entity.
-3.  **Strengthen Timestamp:** The `TimestampString` is good, but we can create a `Timestamp` schema that is a `Schema.Number` representing seconds, and use `transform` to convert to and from the `HH:MM:SS` string format. This makes it easier to work with durations.
-
-### 3.3. Errors (`errors.ts`)
-
-**Problem:** `errors.ts` mixes `Data.TaggedError` definitions with `Schema` definitions.
-
-**Plan:**
-
-1.  **Separate Definitions and Schemas:**
-    *   Move all `class ... extends Data.TaggedError` definitions to `errors/definitions.ts`.
-    *   Move all `...Schema` definitions to `errors/schemas.ts`.
-2.  **Improve Error Schemas:** The current error schemas use `Schema.String` for branded IDs. They should use the actual branded ID schemas and then be transformed to strings during serialization if needed. This improves type safety within the application.
-
-## 4. Deletions and Consolidations
-
-*   **`media-resource-metadata.ts`:** To be deleted after its contents are merged into `schemas/media.ts` and `types/media.ts`.
-*   **`media-resources.ts`:** To be deleted after its contents are merged into `schemas/media.ts` and `types/media.ts`.
+*   **`media-resource-metadata.ts` & `media-resources.ts`:** To be deleted after their contents are merged.
 *   **`TranscriptSegment`:** To be deleted from `transcript.ts`.
 *   **`ModelOutputChunk`:** To be moved from `transcript.ts` to the `llm` package.
 
-## 5. Execution Steps
+## 6. Execution Steps
 
 1.  **Branch:** Create a new git branch for this refactoring.
-2.  **Directory Structure:** Implement the new directory structure as outlined in section 2.
-3.  **Move and Rename:** Move the existing files to their new locations.
-4.  **Refactor Media:** Apply the changes outlined in section 3.1.
-5.  **Refactor Transcript:** Apply the changes outlined in section 3.2.
-6.  **Refactor Errors:** Apply the changes outlined in section 3.3.
-7.  **Update Imports:** Fix all import statements across the entire project that are affected by these changes.
-8.  **Run Tests:** Run all tests to ensure that the refactoring has not introduced any regressions.
-9.  **Commit:** Commit the changes with a clear and descriptive commit message.
+2.  **Directory Structure:** Implement the new directory structure.
+3.  **Implement New Schemas:** Create the schemas for `TranscriptionContext`, `InferenceConfig`, `GenerationPrompt`, and `TranscriptionFeedback`.
+4.  **Refactor Core Schemas:** Apply the planned changes to `Media`, `Transcript`, `TranscriptionJob`, and the service request/response types.
+5.  **Update Imports:** Fix all import statements across the entire project.
+6.  **Run Tests:** Run all tests to ensure no regressions.
+7.  **Commit:** Commit the changes.

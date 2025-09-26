@@ -1,14 +1,14 @@
 import { GoogleGenAI } from "@google/genai"
 import type { MediaMetadata, Speaker, YouTubeVideo } from "@puredialog/domain"
-import { TranscriptSegment } from "@puredialog/domain"
+import { DialogueTurn } from "@puredialog/domain"
 import { Config, Effect, Redacted, Schema } from "effect"
 import type { ConfigError } from "effect/ConfigError"
 import type { ParseError } from "effect/ParseResult"
 import { GoogleApiError, TranscriptionError } from "../errors.js"
 
 // Raw LLM output schema (before post-processing)
-const RawTranscriptSchema = Schema.Array(TranscriptSegment)
-export type RawTranscriptEntry = TranscriptSegment
+const RawTranscriptSchema = Schema.Array(DialogueTurn)
+export type RawTranscriptEntry = DialogueTurn
 
 const createTranscriptionPrompt = (metadata: MediaMetadata): string => {
   const speakers = metadata.speakers

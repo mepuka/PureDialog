@@ -1,6 +1,9 @@
 import { Schema } from "effect"
+import { TranscriptionContext } from "./context.js"
 import { JobId, TranscriptId } from "./ids.js"
-import { MediaResource } from "./media-resources.js"
+import { InferenceConfig } from "./inference.js"
+import { MediaResource } from "./media.js"
+import { GenerationPrompt } from "./prompts.js"
 import { SpeakerRole } from "./speakers.js"
 
 /**
@@ -16,10 +19,6 @@ export const TimestampString = Schema.String.pipe(
 export type Timestamp = Schema.Schema.Type<typeof TimestampString>
 
 /**
- * Defines the specific speaker roles in your primary use case (1-on-1 interviews).
- * More precise and safer than a generic string. Can be extended later.
- */
-/**
  * Represents a single, parsed "turn" in the dialogue.
  * This is the core, structured building block of the transcript.
  */
@@ -30,18 +29,11 @@ export const DialogueTurn = Schema.Struct({
 })
 export type DialogueTurn = Schema.Schema.Type<typeof DialogueTurn>
 
-export const TranscriptSegment = Schema.Struct({
-  timestamp: TimestampString,
-  speaker: SpeakerRole,
-  text: Schema.String.pipe(Schema.nonEmptyString())
-})
-export type TranscriptSegment = Schema.Schema.Type<typeof TranscriptSegment>
-
 /**
  * The canonical, final Transcript entity.
  * This is the primary artifact stored in your database and used by downstream services.
  * It contains the structured, parsed turns as its main payload.
- * // TODO: needs prompt version / inference config / rating
+ * Now includes full traceability for reproducibility.
  */
 export const Transcript = Schema.Struct({
   id: TranscriptId,
@@ -51,20 +43,18 @@ export const Transcript = Schema.Struct({
   rawText: Schema.String.pipe(Schema.nonEmptyString()),
   // The structured turns are the primary, queryable data.
   turns: Schema.Array(DialogueTurn),
+
+  // NEW: Traceability fields
+  inferenceConfig: InferenceConfig,
+  generationPrompt: GenerationPrompt,
+
+  // Context used for generation
+  transcriptionContext: TranscriptionContext,
+
   createdAt: Schema.Date,
   updatedAt: Schema.Date
 })
 export type Transcript = Schema.Schema.Type<typeof Transcript>
 
-/**
- * DTO (Data Transfer Object) for a raw chunk of text streamed from the ASR model.
- * This is an adapter-level concern, not a core domain entity. It represents the
- * temporary shape of the data in transit from the Gemini service.
- */
-export const ModelOutputChunk = Schema.Struct({
-  jobId: JobId,
-  rawChunk: Schema.String,
-  isComplete: Schema.Boolean,
-  receivedAt: Schema.Date
-})
-export type ModelOutputChunk = Schema.Schema.Type<typeof ModelOutputChunk>
+// NOTE: ModelOutputChunk has been removed from domain package
+// It should be moved to the LLM package as it's an adapter-level concern

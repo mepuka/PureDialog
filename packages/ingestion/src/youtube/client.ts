@@ -1,5 +1,6 @@
 import type { HttpClientRequest, HttpClientResponse } from "@effect/platform"
 import { HttpClient } from "@effect/platform"
+import { NodeHttpClient } from "@effect/platform-node"
 import type {
   YouTubeChannel as Channel,
   YouTubeChannelId as ChannelId,
@@ -168,4 +169,4 @@ const makeYoutubeApiClient = Effect.gen(function*() {
 export const YoutubeApiClientLive = Layer.effect(
   YoutubeApiClient,
   makeYoutubeApiClient
-).pipe(Layer.provide(YoutubeConfigLive))
+).pipe(Layer.provide(YoutubeConfigLive), Layer.provideMerge(NodeHttpClient.layer))

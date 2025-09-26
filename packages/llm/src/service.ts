@@ -1,5 +1,5 @@
 import type { AiError, LanguageModel } from "@effect/ai/index"
-import type { MediaMetadata, Speaker, TranscriptSegment, YouTubeChannel, YouTubeVideo } from "@puredialog/domain"
+import type { DialogueTurn, MediaMetadata, Speaker, YouTubeChannel, YouTubeVideo } from "@puredialog/domain"
 import type { Config, Effect } from "effect"
 import { Context, Layer } from "effect"
 import type { ConfigError } from "effect/ConfigError"
@@ -20,7 +20,7 @@ export interface LLMService {
     video: YouTubeVideo,
     metadata: MediaMetadata
   ) => Effect.Effect<
-    ReadonlyArray<TranscriptSegment>,
+    ReadonlyArray<DialogueTurn>,
     GoogleApiError | ConfigError | TranscriptionError | ParseError,
     Config.Config<string>
   >

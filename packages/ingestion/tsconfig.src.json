@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../domain/src/shared/youtube.ts"],
+  "exclude": ["src/**/*.test.ts"],
   "compilerOptions": {
     "types": ["node"],
-    "outDir": "build/src",
+    "outDir": "build/esm",
     "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
     "rootDir": "src"
   },

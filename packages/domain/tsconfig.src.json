@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "outDir": "build/src",
+    "outDir": "build/esm",
     "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
     "rootDir": "src"
   },

@@ -20,9 +20,9 @@
   "dependencies": {
     "@effect/platform": "latest",
     "@effect/platform-node": "latest",
-    "@puredialog/domain": "workspace:^",
     "@google-cloud/pubsub": "latest",
     "@googleapis/youtube": "latest",
+    "@puredialog/domain": "workspace:^",
     "effect": "latest"
   },
   "effect": {
@@ -36,5 +36,8 @@
         "**/*.ts"
       ]
     }
+  },
+  "devDependencies": {
+    "@tim-smart/openapi-gen": "^0.4.13"
   }
 }

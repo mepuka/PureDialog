@@ -42,6 +42,8 @@ export type RawChannel = Schema.Schema.Type<typeof RawChannelSchema>
 // API Response wrapper schema
 const ApiResponse = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
   Schema.Struct({
+    kind: Schema.String,
+    etag: Schema.optional(Schema.String),
     items: Schema.Array(itemSchema),
     error: Schema.optional(
       Schema.Struct({

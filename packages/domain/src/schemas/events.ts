@@ -68,4 +68,5 @@ export const WorkMessage = Schema.TaggedStruct(
 )
 export type WorkMessage = Schema.Schema.Type<typeof WorkMessage>
 
+export type DomainEvent = Schema.Schema.Type<typeof DomainEvent>
 export const DomainEvent = Schema.Union(JobQueued, TranscriptComplete, JobFailed, JobStatusChanged, WorkMessage)

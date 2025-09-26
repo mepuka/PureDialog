@@ -1,132 +1,118 @@
-import { GoogleGenAI } from "@google/genai"
-import type { MediaMetadata, Speaker, YouTubeVideo } from "@puredialog/domain"
-import { DialogueTurn } from "@puredialog/domain"
-import { Config, Effect, Redacted, Schema } from "effect"
-import type { ConfigError } from "effect/ConfigError"
-import type { ParseError } from "effect/ParseResult"
-import { GoogleApiError, TranscriptionError } from "../errors.js"
+import type { MediaMetadata, Speaker } from "@puredialog/domain"
 
-// Raw LLM output schema (before post-processing)
-const RawTranscriptSchema = Schema.Array(DialogueTurn)
-export type RawTranscriptEntry = DialogueTurn
+const systemInstruction =
+  `You are a world-class transcription engine specializing in generating human-level, production-quality transcripts. Your primary goal is to produce accurate, perfectly formatted, and highly readable verbatim transcripts from audio-first media content (e.g., expert interviews, technical discussions, lectures, podcasts).`
 
-const createTranscriptionPrompt = (metadata: MediaMetadata): string => {
+const hints = (metadata: MediaMetadata): string => {
   const speakers = metadata.speakers
-  const speakerList = speakers.map((s: Speaker) => `'${s.name ?? s.role}'`).join(", ")
-  const speakerDescriptions = speakers
-    .map((s: Speaker) => `- **${s.name ?? s.role}:** ${s.bio ?? `${s.role} speaker`}`)
+
+  // Build factual speaker details
+  const speakerHints = speakers
+    .map((s: Speaker) => {
+      const name = s.name ?? s.role
+      const affiliation = s.affiliation
+        ? `${s.affiliation.name}${s.affiliation.url ? ` (${s.affiliation.url})` : ""}`
+        : "N/A"
+      const bio = s.bio || "N/A"
+
+      return `- **${name}** (Role: ${s.role}, Affiliation: ${affiliation}, Bio: ${bio})`
+    })
     .join("\n")
 
-  return `You are a world-class transcription engine specializing in generating human-level, production-quality transcripts from video content. Your task is to analyze the provided video and produce a transcript that is not only accurate but also perfectly formatted and easy to read.
+  // Build domain and tags
+  const domainList = metadata.domain.length > 0 ? metadata.domain.join(", ") : "N/A"
+  const tagsList = metadata.tags.length > 0 ? metadata.tags.join(", ") : "N/A"
 
-**Primary Objective:** Create a verbatim transcript with precise speaker diarization for **${speakers.length}** distinct speakers, adhering strictly to the provided JSON schema.
+  // Build links
+  const linksList = metadata.links.length > 0 ? metadata.links.join(", ") : "N/A"
 
-**Core Instructions:**
+  // Build summary and organization
+  const summary = metadata.summary || "N/A"
+  const organization = metadata.organization || "N/A"
 
-1. **Speaker Diarization:**
-   * Identify the ${speakers.length} primary speakers: ${speakerList}.
-   * Use the following descriptions to help identify each speaker:
-${speakerDescriptions}
-   * Label each dialogue segment with the correct speaker.
-   * You MUST ONLY use the provided speaker labels. Do not invent any other speaker labels. If a voice appears that cannot be confidently matched to one of the provided speakers, you must still assign it to the most likely speaker from the list.
+  const duration = `${Math.floor(metadata.durationSec / 60)}:${(metadata.durationSec % 60).toString().padStart(2, "0")}`
 
-2. **Transcription Accuracy (Verbatim Style):**
-   * Transcribe speech exactly as it is spoken. This includes filler words ("uh", "um", "like"), false starts, and repeated words. These are crucial for capturing the natural cadence of the conversation.
-   * Do not paraphrase, summarize, or correct grammatical errors made by the speakers.
-   * Use proper capitalization and punctuation (commas, periods, question marks) to create coherent sentences that reflect the speaker's delivery and intonation.
+  return `**Media Metadata for Transcription:**
 
-3. **Timestamping Protocol:**
-   * Provide a timestamp in the strict format [MM:SS] at the beginning of EVERY new dialogue entry. For example: [00:00], [01:23], [15:42].
-   * A new dialogue entry is created whenever the speaker changes.
-   * For a long monologue by a single speaker, insert a new timestamped entry at logical pauses or topic shifts, approximately every 1-2 minutes, to maintain synchronization.
+**Speakers (${speakers.length} total):**
+${speakerHints}
 
-4. **Handling Non-Speech Elements:**
-   * The transcript must ONLY contain the verbatim spoken dialogue.
-   * Do not include any non-speech sounds or descriptions like [laughs], [applause], or [music starts].
-   * If speech is completely indecipherable, use [unintelligible]. Use this sparingly.
-   * Do not describe any visual elements. If a speaker refers to something visual on screen (e.g., "as you can see here..."), you must transcribe their words only and NOT describe what they are referring to.
+**Domains (for terminology):** ${domainList}
 
-5. **Technical Context Awareness:**
-   * The video input is low-resolution and compressed to facilitate analysis of long-form content. Your analysis should be robust to potential visual artifacts. Focus primarily on the audio track and contextual visual cues for speaker identification.
+**Tags (key topics):** ${tagsList}
 
-**Thinking Process:**
-Before generating the final JSON output, follow these steps internally:
-1. **Determine Video Length:** First, quickly scan to the end of the video to find the last spoken words (e.g., "thanks for watching," "goodbye"). Note this final timestamp. This will serve as an anchor to ensure all timestamps are logical and within the video's duration.
-2. **Initial Speaker Pass:** Briefly scan the entire video to understand the context, identify the distinct voices, and map them to the provided speaker roles (${speakerList}).
-3. **Detailed Transcription:** Go through the video sequentially. Transcribe the dialogue verbatim, assigning each segment to the correct speaker and generating a precise timestamp in the [MM:SS] format.
-4. **Review and Refine:** Review the complete transcript. Ensure all timestamps are in the correct [MM:SS] format, are strictly sequential, and do not exceed the final timestamp you identified in the first step. Verify that speaker labels are used consistently and correctly according to your initial mapping.
+**Format:** ${metadata.format.replace(/_/g, " ")}
 
-**Output Format:**
-* The entire output MUST be a single, valid JSON array that conforms to the provided schema.
-* Do not include any introductory text, explanations, apologies, or markdown formatting (e.g., \`\`\`json). The response should begin with \`[\` and end with \`]\`.`
+**Language:** ${metadata.language}
+
+**Title:** ${metadata.title}
+
+**Organization:** ${organization}
+
+**Summary:** ${summary}
+
+**Duration:** ${duration} (approximately ${Math.round(metadata.durationSec / 60)} minutes)
+
+**Links:** ${linksList}`
 }
 
-export const transcribeMedia = (
-  resource: YouTubeVideo,
-  metadata: MediaMetadata
-): Effect.Effect<
-  ReadonlyArray<RawTranscriptEntry>,
-  TranscriptionError | GoogleApiError | ConfigError | ParseError,
-  Config.Config<string>
-> =>
-  Effect.gen(function*() {
-    const prompt = createTranscriptionPrompt(metadata)
-    const apiKey = yield* Config.redacted("GOOGLE_AI_API_KEY")
+const instructions = `
+**PRIMARY OBJECTIVE:** Generate a verbatim transcript with precise speaker diarization.
 
-    const result = yield* Effect.tryPromise({
-      try: async () => {
-        // Use the native Google AI SDK wrapped safely in Effect
-        const genAI = new GoogleGenAI({ apiKey: Redacted.value(apiKey) })
+**CORE INSTRUCTIONS:**
 
-        const response = await genAI.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{
-            parts: [{
-              fileData: {
-                fileUri: `https://www.youtube.com/watch?v=${resource.id}`
-              }
-            }]
-          }],
-          config: {
-            responseMimeType: "application/json",
-            temperature: 0.0,
-            systemInstruction: {
-              parts: [{ text: prompt }]
-            }
-          }
-        })
+1. **Transcription Accuracy (Verbatim Style):**
+  * Transcribe speech exactly as spoken, including filler words ("uh," "um," "like"), false starts, and repeated words.
+  * Do not paraphrase, summarize, or correct grammatical errors.
+  * Use proper capitalization and punctuation (commas, periods, question marks) to create coherent sentences that reflect the speaker's delivery and intonation.
 
-        if (!response.text) {
-          throw new GoogleApiError({
-            message: "No text response from Google AI"
-          })
-        }
+2. **Dialogue Turn Formatting:**
+  * Format every dialogue turn using this **exact** structure:
+    \`\`\`
+    [HH:MM] <SpeakerRole>
+    <text>
+    \`\`\`
+  * **Timestamp:** The timestamp must be in [HH:MM] format (e.g., [00:00], [01:23]).
+  * **Speaker Role:** Follow the timestamp with **exactly one space**, then the speaker role in angle brackets (e.g., "<Host>", "<Guest>").
+  * **Text:** Place the verbatim spoken text on a new line directly below the speaker role.
+  * **Separation:** Add a blank line between each dialogue turn for readability.
+  * **Common Formatting Errors to Avoid:**
+    * [00:15]<Host> (Missing space after timestamp)
+    * [00:15] Host (Missing angle brackets around speaker role)
+    * [00:15:03] <Host> (Incorrect timestamp format; must be [HH:MM])
+  * **Simultaneous Speech (Crosstalk):** If two speakers talk over each other, place their dialogue on separate, consecutive lines with the same timestamp.
+    \`\`\`
+    [00:45] <Host>
+    And so we decided to--
 
-        const text = response.text
-        try {
-          return JSON.parse(text)
-        } catch (parseError) {
-          throw new TranscriptionError({
-            message: "Failed to parse LLM response as JSON",
-            cause: parseError
-          })
-        }
-      },
-      catch: (error) => {
-        if (error instanceof TranscriptionError || error instanceof GoogleApiError) {
-          return error
-        }
-        return new TranscriptionError({
-          message: "Unexpected transcription error",
-          cause: error
-        })
-      }
-    })
+    [00:45] <Guest>
+    --but that wasn't the original plan.
+    \`\`\`
+  * **New Turn Definition:** A new turn starts every time a new speaker begins speaking. For long monologues by a single speaker, create new turns at logical pauses or topic shifts, approximately every 1-2 minutes.
+  * **Speaker Labels:** You **MUST ONLY** label speakers with the provided **Speaker Roles** from the 'Transcription Context'. Using any other label is a failure to follow instructions.
 
-    return yield* Schema.decodeUnknown(RawTranscriptSchema)(result)
-  })
+3. **Handling Non-Speech Elements:**
+  * The transcript must **ONLY** contain the verbatim spoken dialogue.
+  * **ABSOLUTELY NO** non-speech sounds or descriptions are allowed. This includes, but is not limited to: "[laughs]", "[applause]", "[music starts]", "[clears throat]". The only exception is "[unintelligible]".
+  * If speech is completely indecipherable, use "[unintelligible]" sparingly. Do not guess the words.
+  * Do not describe any visual elements. If a speaker refers to something visual on screen (e.g., "as you can see here..."), transcribe their words only and DO NOT describe what they are referring to.
 
-// Simpler version without client dependency for now
-export const createGoogleTranscriber = () => {
-  return (resource: YouTubeVideo, metadata: MediaMetadata) => transcribeMedia(resource, metadata)
-}
+**THINKING PROCESS (Internal Steps):**
+
+1. **Video Scan:** Determine the video's approximate total duration by scanning to the end to find the last spoken words (e.g., "thanks for watching," "goodbye"). Note this final timestamp to ensure all generated timestamps are logical and within bounds.
+2. **Context Review:** Thoroughly review the 'Transcription Context' provided, paying close attention to the **Media Title**, **Format**, **Speakers to Identify**, **Speaker Roles**, **Subject Areas**, and **Key Topics**. This context is vital for accurate transcription and diarization, especially for niche terminology.
+3. **Initial Speaker Pass:** Briefly scan the entire video's audio to understand the overall content, identify distinct voices, and mentally map them to the provided **Speaker Roles**. This helps establish speaker identities and speaking patterns.
+4. **Detailed Transcription & Diarization:** Go through the video sequentially. Transcribe all dialogue verbatim. For each segment of speech, assign it to the correct speaker using only the provided **Speaker Role** and generate a precise timestamp in the [HH:MM] format. Ensure each dialogue turn follows the exact formatting specified in **Instruction 2**.
+5. **Review and Refine:** Conduct a final review of the complete transcript.
+  * Verify all timestamps are in the correct [HH:MM] format, are strictly sequential, and do not exceed the final timestamp identified in Step 1.
+  * Confirm that speaker labels are used consistently and correctly according to your initial mapping and adhere strictly to the provided **Speaker Roles**.
+  * Ensure each dialogue turn follows the required formatting with proper spacing between turns.
+  * Double-check that no non-speech elements or visual descriptions are present.
+
+**OUTPUT FORMAT:**
+The output must ONLY be the verbatim transcript, strictly following all formatting rules above.
+*   **DO NOT** include any introductory text, explanations, apologies, or concluding remarks (e.g., "Here is the transcript:", "I hope this is helpful.").
+*   The response must begin directly with the first dialogue turn (e.g., [00:00] <SpeakerRole>) and contain nothing else but the formatted transcript.
+*   Do not use any markdown formatting beyond what is required for the dialogue turn structure itself.`
+
+export { hints, instructions, systemInstruction }

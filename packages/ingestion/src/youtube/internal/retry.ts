@@ -1,10 +1,11 @@
 import type { HttpClientError } from "@effect/platform"
-import { Effect, Schedule } from "effect"
+import { Duration, Effect, Schedule } from "effect"
+import { YoutubeConfig } from "../config.js"
 import { YoutubeApiError } from "../errors.js"
 
-// Retry policy for YouTube API
-export const youtubeRetrySchedule = (maxAttempts: number) =>
-  Schedule.exponential("1 seconds").pipe(
+// Create retry schedule from config
+const createRetrySchedule = (maxAttempts: number, baseDelayMs: number) =>
+  Schedule.exponential(Duration.millis(baseDelayMs)).pipe(
     Schedule.intersect(Schedule.recurs(maxAttempts - 1)),
     Schedule.whileInputEffect((error: YoutubeApiError) =>
       Effect.succeed(
@@ -17,7 +18,12 @@ export const youtubeRetrySchedule = (maxAttempts: number) =>
   )
 
 export const withRetry = <A, R>(effect: Effect.Effect<A, YoutubeApiError, R>) =>
-  effect.pipe(Effect.retry(youtubeRetrySchedule(3))) // Default retry attempts since retryAttempts removed
+  Effect.gen(function*() {
+    const config = yield* YoutubeConfig
+    const backoffMs = Duration.toMillis(config.retryBackoff)
+    const schedule = createRetrySchedule(config.retryAttempts, backoffMs)
+    return yield* effect.pipe(Effect.retry(schedule))
+  })
 
 // HTTP error transformation
 export const transformHttpError = (error: HttpClientError.HttpClientError): YoutubeApiError => {

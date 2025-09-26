@@ -1,5 +1,5 @@
 import { Config, Context, Duration, Effect, Layer, Redacted } from "effect"
-import { PubSubPublishError } from "./errors.js"
+import { PubSubError } from "./errors.js"
 
 export type TopicName = string
 export type SubscriptionName = string
@@ -97,13 +97,13 @@ const makeConfig = Effect.gen(function*() {
   // Validate essential constraints
   if (!projectId || projectId.trim().length === 0) {
     return yield* Effect.fail(
-      PubSubPublishError.clientFailure("project", "Project ID cannot be empty")
+      PubSubError.clientFailure("project", "Project ID cannot be empty")
     )
   }
 
   if (concurrency <= 0) {
     return yield* Effect.fail(
-      PubSubPublishError.clientFailure(
+      PubSubError.clientFailure(
         "config",
         "Subscriber concurrency must be greater than zero"
       )

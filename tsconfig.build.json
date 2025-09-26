@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [],
+  "references": [
+    { "path": "packages/domain/tsconfig.build.json" },
+    { "path": "packages/ingestion/tsconfig.build.json" },
+    { "path": "packages/llm/tsconfig.build.json" },
+    { "path": "packages/api/tsconfig.build.json" },
+    { "path": "packages/worker-metadata/tsconfig.build.json" },
+    { "path": "packages/worker-transcription/tsconfig.build.json" }
+  ]
+}

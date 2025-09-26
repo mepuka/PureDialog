@@ -1,0 +1,1 @@
+Domain package for Pure Dialog

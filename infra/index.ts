@@ -42,6 +42,9 @@ const gcpConfig = new pulumi.Config("gcp");
 const cloudRunConfig = new pulumi.Config("cloudrun");
 const pubsubConfig = new pulumi.Config("pubsub");
 const storageConfig = new pulumi.Config("storage");
+const envConfig = new pulumi.Config("env");
+
+const youtubeApiKey = envConfig.requireSecret("youtubeApiKey");
 
 const defaultStackConfig: StackConfig = {
   project: gcpConfig.get("project") ?? "gen-lang-client-0874846742",
@@ -186,6 +189,7 @@ const apiService = createService(
     PUBSUB_TOPIC_WORK: configuration.pubsub.workTopic,
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     SHARED_BUCKET: sharedArtifactsBucket.name,
+    YOUTUBE_API_KEY: youtubeApiKey,
   },
   "INGRESS_TRAFFIC_ALL",
 );
@@ -199,6 +203,7 @@ const metadataWorkerService = createService(
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     PUBSUB_SUBSCRIPTION: configuration.pubsub.metadataSubscription,
     SHARED_BUCKET: sharedArtifactsBucket.name,
+    YOUTUBE_API_KEY: youtubeApiKey,
   },
   "INGRESS_TRAFFIC_ALL",
 );
@@ -212,6 +217,7 @@ const transcriptionWorkerService = createService(
     PUBSUB_TOPIC_EVENTS: configuration.pubsub.eventsTopic,
     PUBSUB_SUBSCRIPTION: configuration.pubsub.transcriptionSubscription,
     SHARED_BUCKET: sharedArtifactsBucket.name,
+    YOUTUBE_API_KEY: youtubeApiKey,
   },
   "INGRESS_TRAFFIC_ALL",
 );

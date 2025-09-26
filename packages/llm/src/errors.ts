@@ -1,16 +1,11 @@
-import { Data } from "effect";
+import { Data } from "effect"
 
-export type GeminiError =
-  | ConfigurationError
-  | ApiError
-  | NetworkError
-  | RateLimitedError
-  | ValidationError
-  | CancelledError;
+export class TranscriptionError extends Data.TaggedError("TranscriptionError")<{
+  readonly message: string
+  readonly cause?: unknown
+}> {}
 
-export class ConfigurationError extends Data.TaggedError("ConfigurationError")<{ message: string }> {}
-export class ApiError extends Data.TaggedError("ApiError")<{ message: string }> {}
-export class NetworkError extends Data.TaggedError("NetworkError")<{ message: string }> {}
-export class RateLimitedError extends Data.TaggedError("RateLimitedError")<{ message: string }> {}
-export class ValidationError extends Data.TaggedError("ValidationError")<{ message: string }> {}
-export class CancelledError extends Data.TaggedError("CancelledError")<{ message: string }> {}
+export class GoogleApiError extends Data.TaggedError("GoogleApiError")<{
+  readonly message: string
+  readonly status?: number
+}> {}

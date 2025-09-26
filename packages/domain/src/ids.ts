@@ -1,18 +1,21 @@
-import { Schema } from "effect";
+import { Schema } from "effect"
 
 /** A unique identifier for a processing job. */
-export const JobId = Schema.String.pipe(Schema.brand("JobId"));
-export type JobId = Schema.Schema.Type<typeof JobId>;
+export const JobId = Schema.String.pipe(Schema.brand("JobId"))
+export type JobId = Schema.Schema.Type<typeof JobId>
 
-export const RequestId = Schema.String.pipe(Schema.brand("RequestId"));
-export type RequestId = Schema.Schema.Type<typeof RequestId>;
+export const RequestId = Schema.String.pipe(Schema.brand("RequestId"))
+export type RequestId = Schema.Schema.Type<typeof RequestId>
 
 /** A unique identifier for a transcript artifact. */
-export const TranscriptId = Schema.String.pipe(Schema.brand("TranscriptId"));
-export type TranscriptId = Schema.Schema.Type<typeof TranscriptId>;
+export const TranscriptId = Schema.String.pipe(Schema.brand("TranscriptId"))
+export type TranscriptId = Schema.Schema.Type<typeof TranscriptId>
 
 /** A unique identifier for a media resource. */
 export const MediaResourceId = Schema.String.pipe(
-  Schema.brand("MediaResourceId"),
-);
-export type MediaResourceId = Schema.Schema.Type<typeof MediaResourceId>;
+  Schema.brand("MediaResourceId")
+)
+export type MediaResourceId = Schema.Schema.Type<typeof MediaResourceId>
+
+export const CorrelationId = Schema.String.pipe(Schema.brand("CorrelationId"))
+export type CorrelationId = Schema.Schema.Type<typeof CorrelationId>

@@ -1,24 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "types": ["node"],
-    "moduleResolution": "bundler",
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "allowJs": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "baseUrl": ".",
-    "include": ["src/**/*"],
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+  "references": [
+    { "path": "packages/domain" },
+    { "path": "packages/ingestion" },
+    { "path": "packages/llm" },
+    { "path": "packages/api" },
+    { "path": "packages/worker-metadata" },
+    { "path": "packages/worker-transcription" },
+  ]
 }
+

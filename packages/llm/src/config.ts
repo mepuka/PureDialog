@@ -1,17 +1,20 @@
-import { Config } from "effect";
+import { Config } from "effect"
 
 export const GeminiConfig = Config.all({
   apiKey: Config.redacted("GEMINI_API_KEY"),
   model: Config.string("GEMINI_MODEL").pipe(
-    Config.withDefault("gemini-2.5-flash"),
+    Config.withDefault("gemini-2.5-flash")
+  ),
+  temperature: Config.number("GEMINI_TEMPERATURE").pipe(
+    Config.withDefault(0.0)
   ),
   timeout: Config.number("GEMINI_TIMEOUT").pipe(
-    Config.withDefault(30000),
+    Config.withDefault(30000)
   ),
   maxRetries: Config.number("GEMINI_MAX_RETRIES").pipe(
-    Config.withDefault(3),
+    Config.withDefault(3)
   ),
   backoff: Config.number("GEMINI_BACKOFF").pipe(
-    Config.withDefault(1000),
-  ),
-});
+    Config.withDefault(1000)
+  )
+})

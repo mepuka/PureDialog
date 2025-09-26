@@ -9,6 +9,8 @@ node_modules/
 .build/**
 build.tsbuildinfo
 
+.tsbuildinfo
+
 /packages/**/build/**
 /packages/**/dist/**
 # Environment variables

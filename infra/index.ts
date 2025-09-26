@@ -168,8 +168,8 @@ const createService = (
           envs: envVars(env),
           resources: {
             limits: {
-              cpu: config.cpu,
-              memory: config.memory,
+              cpu: config.cpu ?? "1",
+              memory: config.memory ?? "512Mi",
             },
           },
         },

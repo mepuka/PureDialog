@@ -9,7 +9,10 @@ node_modules/
 .build/**
 build.tsbuildinfo
 
+# TypeScript build info (files and directories)
 .tsbuildinfo
+.tsbuildinfo/
+/packages/**/.tsbuildinfo/**
 
 /packages/**/build/**
 /packages/**/dist/**

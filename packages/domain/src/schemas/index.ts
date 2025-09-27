@@ -11,6 +11,7 @@ export * from "./responses.js"
 export * from "./speakers.js"
 export * from "./status.js"
 export * from "./transcript.js"
+export * from "./transport.js"
 
 // YouTube schemas - full API surface
 // Note: Main domain index only exports commonly used YouTube utilities

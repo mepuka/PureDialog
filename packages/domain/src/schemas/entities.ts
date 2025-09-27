@@ -19,6 +19,8 @@ export class TranscriptionJob extends Schema.Class<TranscriptionJob>("Transcript
   // NEW: Context field for user-provided information
   transcriptionContext: Schema.optional(TranscriptionContext),
   metadata: Schema.optional(Schema.Struct({
-    priority: Schema.optional(Schema.String)
+    priority: Schema.optional(Schema.String),
+    source: Schema.optional(Schema.String),
+    clientVersion: Schema.optional(Schema.String)
   }))
 }) {}

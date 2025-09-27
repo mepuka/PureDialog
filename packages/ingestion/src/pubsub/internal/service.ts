@@ -1,8 +1,8 @@
 import { PubSub } from "@google-cloud/pubsub"
+import type { PubSubMessage } from "@puredialog/domain"
 import { Context, Effect, Layer, Schedule } from "effect"
 import { isEmulator, PubSubConfig, type PubSubConfigInterface, PubSubConfigLive } from "../Config.js"
 import { PubSubError } from "../errors.js"
-import type { PubSubMessage } from "./types.js"
 
 /** PubSub Service Interface */
 export class PubSubService extends Context.Tag("PubSubService")<

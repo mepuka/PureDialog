@@ -21,6 +21,7 @@
     "@effect/platform": "latest",
     "@effect/platform-node": "latest",
     "@google-cloud/pubsub": "latest",
+    "@google-cloud/storage": "^7.7.0",
     "@googleapis/youtube": "latest",
     "@puredialog/domain": "workspace:^",
     "effect": "latest"

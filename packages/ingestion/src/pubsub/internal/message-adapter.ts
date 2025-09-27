@@ -1,8 +1,7 @@
-import type { JobId, RequestId } from "@puredialog/domain"
+import type { JobId, PubSubMessage, RequestId } from "@puredialog/domain"
 import { DomainEvent as DomainEventSchema, TranscriptionJob as TranscriptionJobSchema } from "@puredialog/domain"
 import { Context, Effect, Layer, Match, ParseResult, Schema } from "effect"
 import { MessageEncodingError } from "../errors.js"
-import type { PubSubMessage } from "./types.js"
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()

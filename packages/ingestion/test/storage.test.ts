@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Effect, Layer, Option, Schema } from "effect"
-import { CloudStorageConfig, CloudStorageService, CloudStorageServiceLive } from "../src/storage/index.js"
+import { CloudStorageConfig, CloudStorageService } from "../src/storage/index.js"
 
 // Mock CloudStorageConfig for testing
 const TestCloudStorageConfig = Layer.sync(CloudStorageConfig, () => ({
@@ -16,13 +16,13 @@ const TestCloudStorageConfig = Layer.sync(CloudStorageConfig, () => ({
 
 // Mock CloudStorageService for testing
 const TestCloudStorageService = Layer.sync(CloudStorageService, () => ({
-  putObject: (bucket, key, data) =>
+  putObject: (bucket, key, _data) =>
     Effect.gen(function*() {
       yield* Effect.logInfo(`Mock putObject: ${bucket}/${key}`)
       // Simulate successful operation
     }),
 
-  getObject: (bucket, key, schema) =>
+  getObject: (bucket, key, _schema) =>
     Effect.gen(function*() {
       yield* Effect.logInfo(`Mock getObject: ${bucket}/${key}`)
       // Return none for simplicity

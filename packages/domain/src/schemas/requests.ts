@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { TranscriptionContext } from "./context.js"
-import { JobId, RequestId } from "./ids.js"
+import { JobId } from "./ids.js"
 import { InferenceConfig } from "./inference.js"
 import { MediaResource } from "./media.js"
 
@@ -17,13 +17,7 @@ export type ResourceRequest = Schema.Schema.Type<typeof ResourceRequest>
 
 /** Request to create a new transcription job. */
 export const CreateTranscriptionJobRequest = Schema.Struct({
-  /** User making the request */
-  requestId: RequestId,
-  /** Non-empty text input containing resource references */
-  inputText: Schema.String.pipe(Schema.nonEmptyString()),
-  /** Resources to extract and process from the input text */
-  resources: Schema.Array(ResourceRequest).pipe(Schema.minItems(1)),
-  /** NEW: User-provided context for transcription */
+  resource: MediaResource,
   transcriptionContext: Schema.optional(TranscriptionContext)
 })
 export type CreateTranscriptionJobRequest = Schema.Schema.Type<

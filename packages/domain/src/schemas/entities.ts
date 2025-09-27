@@ -18,6 +18,7 @@ export class TranscriptionJob extends Schema.Class<TranscriptionJob>("Transcript
   error: Schema.optional(Schema.String),
   // NEW: Context field for user-provided information
   transcriptionContext: Schema.optional(TranscriptionContext),
+  idempotencyKey: Schema.optional(Schema.String),
   metadata: Schema.optional(Schema.Struct({
     priority: Schema.optional(Schema.String),
     source: Schema.optional(Schema.String),

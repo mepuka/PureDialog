@@ -2,7 +2,7 @@ import { HttpApiBuilder } from "@effect/platform"
 import { MessageAdapter, MessageAdapterLive } from "@puredialog/ingestion"
 import { Effect, Layer } from "effect"
 import { PureDialogApi } from "../api.js"
-import { ProcessingJobStore, ProcessingJobStoreMock } from "../services/JobStore.js"
+import { ProcessingJobStore, ProcessingJobStoreMock } from "./services/JobStore.js"
 
 /**
  * Handler for Pub/Sub push messages.

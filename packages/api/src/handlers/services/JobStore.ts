@@ -1,69 +1,55 @@
 import type { JobId, JobStatus } from "@puredialog/domain"
 import { TranscriptionJob } from "@puredialog/domain"
 import { Context, Effect, Layer, Option } from "effect"
-import { DatabaseError } from "../errors.js"
+import { DatabaseError } from "../../errors.js"
 
 /**
- * Job store interface for managing transcription jobs
+ * Service interface for persistence operations on ProcessingJob entities.
  */
 interface ProcessingJobStore {
   readonly createJob: (job: TranscriptionJob) => Effect.Effect<TranscriptionJob, DatabaseError>
-  readonly findJobById: (jobId: JobId) => Effect.Effect<Option.Option<TranscriptionJob>, DatabaseError>
   readonly findJobByIdempotencyKey: (key: string) => Effect.Effect<Option.Option<TranscriptionJob>, DatabaseError>
   readonly updateJobStatus: (
     jobId: JobId,
     status: JobStatus,
     error?: string
   ) => Effect.Effect<TranscriptionJob, DatabaseError>
+  readonly findJobById: (jobId: JobId) => Effect.Effect<Option.Option<TranscriptionJob>, DatabaseError>
 }
 
 /**
- * Service tag for ProcessingJobStore
+ * Service tag for ProcessingJobStore.
  */
-export class ProcessingJobStore extends Context.Tag("ProcessingJobStore")<
-  ProcessingJobStore,
-  ProcessingJobStore
->() {}
+const ProcessingJobStore = Context.GenericTag<ProcessingJobStore>("@puredialog/api/ProcessingJobStore")
 
 /**
- * Mock implementation for testing
+ * Mock implementation using in-memory Map for development and testing.
  */
-export const ProcessingJobStoreMock = Layer.sync(ProcessingJobStore, () => {
-  const jobs = new Map<JobId, TranscriptionJob>()
-  const idempotencyMap = new Map<string, JobId>()
+const ProcessingJobStoreMock: Layer.Layer<ProcessingJobStore> = Layer.sync(ProcessingJobStore, () => {
+  // In-memory storage for jobs
+  const jobs = new Map<string, TranscriptionJob>()
 
   return {
     createJob: (job) =>
       Effect.gen(function*() {
-        yield* Effect.logInfo(`Creating job: ${job.id}`)
+        yield* Effect.logInfo(`Creating job with idempotency key: ${job.id}`)
 
-        // Store job
+        // Store job by its string representation for lookup
         jobs.set(job.id, job)
 
-        // Store idempotency mapping if key exists
-        if (job.metadata?.idempotencyKey) {
-          idempotencyMap.set(job.metadata.idempotencyKey, job.id)
-        }
-
+        yield* Effect.logInfo(`Job created successfully: ${job.id}`)
         return job
-      }),
-
-    findJobById: (jobId) =>
-      Effect.gen(function*() {
-        yield* Effect.logInfo(`Finding job by ID: ${jobId}`)
-        const job = jobs.get(jobId)
-        return Option.fromNullable(job)
       }),
 
     findJobByIdempotencyKey: (key) =>
       Effect.gen(function*() {
         yield* Effect.logInfo(`Finding job by idempotency key: ${key}`)
-        const jobId = idempotencyMap.get(key)
-        if (!jobId) {
-          return Option.none()
-        }
-        const job = jobs.get(jobId)
-        return Option.fromNullable(job)
+
+        const job = jobs.get(key)
+        const result = job ? Option.some(job) : Option.none()
+
+        yield* Effect.logInfo(`Job lookup result: ${result._tag}`)
+        return result
       }),
 
     updateJobStatus: (jobId, status, error) =>
@@ -85,15 +71,27 @@ export const ProcessingJobStoreMock = Layer.sync(ProcessingJobStore, () => {
         const updatedJob = new TranscriptionJob({
           ...existingJob,
           status,
-          error,
+          error: error || existingJob.error,
           updatedAt: new Date()
         })
 
-        // Update storage
         jobs.set(jobId, updatedJob)
 
-        yield* Effect.logInfo(`Job status updated: ${jobId} -> ${status}`)
+        yield* Effect.logInfo(`Job status updated successfully: ${jobId}`)
         return updatedJob
+      }),
+
+    findJobById: (jobId) =>
+      Effect.gen(function*() {
+        yield* Effect.logInfo(`Finding job by ID: ${jobId}`)
+
+        const job = jobs.get(jobId)
+        const result = job ? Option.some(job) : Option.none()
+
+        yield* Effect.logInfo(`Job lookup result: ${result._tag}`)
+        return result
       })
   }
 })
+
+export { ProcessingJobStore, ProcessingJobStoreMock }

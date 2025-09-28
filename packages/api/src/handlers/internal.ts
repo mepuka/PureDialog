@@ -4,7 +4,6 @@ import type { MessageEncodingError } from "@puredialog/ingestion"
 import { MessageAdapter, MessageAdapterLive } from "@puredialog/ingestion"
 import { Effect, Layer, Match, Option } from "effect"
 
-import { HttpApiDecodeError } from "@effect/platform/HttpApiError"
 import { PureDialogApi } from "../api.js"
 import type { RepositoryError } from "../errors.js"
 import { JobNotFound } from "../errors.js"
@@ -29,30 +28,30 @@ const processEvent = (event: DomainEvent) => {
   }
 
   return Effect.gen(function*() {
-    const jobStore = yield* JobStore
+    const jobStore = yield* JobStore;
+    const job = yield* jobStore.findJobById(event.jobId).pipe(
+      Effect.flatMap(
+        Option.match({
+          onSome: (job) => Effect.succeed(job),
+          onNone: () => Effect.fail(new JobNotFound({ jobId: event.jobId, message: "Job not found" }))
+        })
+      )
+    );
 
-    // Find the job first, failing early if it doesn't exist.
-    const job = yield* jobStore.findJobById(event.jobId)
-
-    if (Option.isNone(job)) {
-      return yield* new JobNotFound({ jobId: event.jobId, message: "Job not found" })
-    }
-
-    // Now, handle the event since we know the job exists.
     return yield* Match.value(event).pipe(
-      Match.tag("JobFailed", (e) => jobStore.updateJobStatus(job.value.id, "Failed", e.error)),
+      Match.tag("JobFailed", (e) => jobStore.updateJobStatus(job.id, "Failed", e.error)),
       // TODO: handlde "handle dlq"
       Match.tag("TranscriptComplete", (e) =>
         jobStore
-          .updateJobStatus(job.value.id, "Completed", undefined, e.transcript.id)
+          .updateJobStatus(job.id, "Completed", undefined, e.transcript.id)
           .pipe(
             Effect.tap((updatedJob) => handleTranscriptionCompletion(updatedJob, e.transcript.id))
           )),
-      Match.tag("JobStatusChanged", (e) => jobStore.updateJobStatus(job.value.id, e.to)),
+      Match.tag("JobStatusChanged", (e) => jobStore.updateJobStatus(job.id, e.to)),
       Match.exhaustive
-    )
-  })
-}
+    );
+  });
+};
 
 /**
  * Handler for Pub/Sub push messages.
@@ -77,10 +76,15 @@ const internalLayer = HttpApiBuilder.group(PureDialogApi, "internal", (handlers)
       }).pipe(
         Effect.catchTags({
           JobNotFound: (e: JobNotFound) =>
-            new HttpApiDecodeError({
-              message: e.message,
-              issues: []
-            }),
+            Effect.logWarning(e.message, e).pipe(
+              Effect.andThen(() =>
+                Effect.succeed({
+                  received: true,
+                  processed: false,
+                  reason: e.message
+                })
+              )
+            ),
           MessageEncodingError: (e: MessageEncodingError) =>
             Effect.logWarning("Failed to decode message", e).pipe(
               Effect.andThen(() =>

@@ -1,7 +1,8 @@
-import type { JobId, JobStatus, TranscriptId } from "@puredialog/domain"
-import { TranscriptionJob } from "@puredialog/domain"
+import type { JobStatus, TranscriptId } from "@puredialog/domain"
+import { JobId, TranscriptionJob } from "@puredialog/domain"
 import { CloudStorageConfig, CloudStorageService } from "@puredialog/ingestion"
-import { Context, Data, Effect, Layer, Option, Schema } from "effect"
+import { Context, Data, Effect, Layer, Option } from "effect"
+import { hashIdempotencyKey, idempotencyKeyFromString } from "../utils/idempotency.js"
 import { Index } from "./storage/indices.js"
 
 // --- REPOSITORY INTERFACE ---
@@ -44,10 +45,20 @@ export const JobRepositoryLayer = Layer.effect(
     const config = yield* CloudStorageConfig
     const bucket = config.bucket
 
-    const save = (job: TranscriptionJob): Effect.Effect<TranscriptionJob, RepositoryError> => {
-      const path = Index.job(job.status, job.id)
-      return storage.putObject(bucket, path, job).pipe(
-        Effect.as(job),
+    const save = (job: TranscriptionJob): Effect.Effect<TranscriptionJob, RepositoryError> =>
+      Effect.gen(function*() {
+        const path = Index.job(job.status, job.id)
+        yield* storage.putObject(bucket, path, job)
+
+        if (job.idempotencyKey) {
+          const idempotencyKey = idempotencyKeyFromString(job.idempotencyKey)
+          const hashedKey = yield* hashIdempotencyKey(idempotencyKey)
+          const idempotencyPath = Index.idempotency(hashedKey)
+          yield* storage.putObject(bucket, idempotencyPath, { jobId: job.id })
+        }
+
+        return job
+      }).pipe(
         Effect.mapError(
           (cause) =>
             new RepositoryError({
@@ -57,14 +68,13 @@ export const JobRepositoryLayer = Layer.effect(
             })
         )
       )
-    }
 
     const findById = (jobId: JobId): Effect.Effect<Option.Option<TranscriptionJob>, RepositoryError> => {
       const statuses: Array<JobStatus> = ["Queued", "Processing", "Completed", "Failed"]
 
-      const checkStatus = (status: JobStatus): Effect.Effect<Option.Option<TranscriptionJob>, never> =>
+      const checkStatus = (status: JobStatus) =>
         storage
-          .getObject<TranscriptionJob>(bucket, Index.job(status, jobId), Schema.typeSchema(TranscriptionJob))
+          .getObject(bucket, Index.job(status, jobId), TranscriptionJob)
           .pipe(Effect.catchAll(() => Effect.succeed(Option.none())))
 
       // Check each status prefix until the job is found
@@ -128,33 +138,23 @@ export const JobRepositoryLayer = Layer.effect(
     return {
       save,
       findById,
-      findByIdempotencyKey: (keyString: string): Effect.Effect<Option.Option<TranscriptionJob>, RepositoryError> => {
-        const statuses: Array<JobStatus> = ["Queued", "Processing", "Completed", "Failed"]
-
-        const searchInStatus = (status: JobStatus): Effect.Effect<Option.Option<TranscriptionJob>, never> =>
-          storage.listObjects(bucket, Index.jobs(status)).pipe(
-            Effect.flatMap((objectKeys: ReadonlyArray<string>) =>
-              Effect.forEach(
-                objectKeys,
-                (objectKey: string): Effect.Effect<Option.Option<TranscriptionJob>, never> =>
-                  storage.getObject(bucket, objectKey, Schema.typeSchema(TranscriptionJob)).pipe(
-                    Effect.map((maybeJob: Option.Option<TranscriptionJob>) =>
-                      Option.isSome(maybeJob) && maybeJob.value.idempotencyKey === keyString
-                        ? maybeJob
-                        : Option.none()
-                    ),
-                    Effect.catchAll(() => Effect.succeed(Option.none()))
-                  ),
-                { concurrency: "unbounded" }
-              )
-            ),
-            Effect.map((results: ReadonlyArray<Option.Option<TranscriptionJob>>) => Option.firstSomeOf(results)),
-            Effect.catchAll(() => Effect.succeed(Option.none()))
+      findByIdempotencyKey: (keyString: string): Effect.Effect<Option.Option<TranscriptionJob>, RepositoryError> =>
+        Effect.gen(function*() {
+          const idempotencyKey = idempotencyKeyFromString(keyString)
+          const hashedKey = yield* hashIdempotencyKey(idempotencyKey)
+          const idempotencyPath = Index.idempotency(hashedKey)
+          const maybeJobId = yield* storage.getObject(
+            bucket,
+            idempotencyPath,
+            JobId
           )
 
-        // Search across all status prefixes until a job is found
-        return Effect.forEach(statuses, searchInStatus, { concurrency: "unbounded" }).pipe(
-          Effect.map((results: ReadonlyArray<Option.Option<TranscriptionJob>>) => Option.firstSomeOf(results)),
+          if (Option.isNone(maybeJobId)) {
+            return Option.none()
+          }
+
+          return yield* findById(maybeJobId.value)
+        }).pipe(
           Effect.mapError(
             (cause) =>
               new RepositoryError({
@@ -163,8 +163,7 @@ export const JobRepositoryLayer = Layer.effect(
                 cause
               })
           )
-        )
-      },
+        ),
       updateStatus
     }
   })

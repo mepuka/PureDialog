@@ -13,11 +13,11 @@ export interface CloudStorageServiceInterface {
     data: unknown
   ) => Effect.Effect<void, CloudStorageError>
 
-  readonly getObject: <T>(
+  readonly getObject: <T extends Schema.Schema.AnyNoContext>(
     bucket: string,
     key: string,
-    schema: Schema.Schema<T>
-  ) => Effect.Effect<Option.Option<T>, CloudStorageError>
+    schema: T
+  ) => Effect.Effect<Option.Option<Schema.Schema.Type<T>>, CloudStorageError>
 
   readonly deleteObject: (
     bucket: string,

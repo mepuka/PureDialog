@@ -5,6 +5,11 @@
     "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
     "outDir": "build/esm",
     "declarationDir": "build/dts",
+    "noEmit": false,
     "stripInternal": true
-  }
+  },
+  "references": [
+    { "path": "../domain" },
+    { "path": "../ingestion" }
+  ]
 }

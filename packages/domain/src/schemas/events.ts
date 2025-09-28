@@ -7,7 +7,7 @@ import { Transcript } from "./transcript.js"
 export const JobEventType = Schema.Literal(
   "JobQueued",
   "JobFailed",
-  "JobStatusChanged",
+  "JobStatujsChanged",
   "TranscriptComplete",
   "WorkMessage"
 )

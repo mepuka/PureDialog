@@ -1,16 +1,17 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "types": ["node"],
+    "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
     "outDir": "build/esm",
-    "declaration": true,
     "declarationDir": "build/dts",
-    "composite": true,
-    "noEmit": false
+    "stripInternal": true,
+    "rootDir": "src"
   },
-  "include": ["src/**/*.ts"],
   "references": [
     { "path": "../domain" },
     { "path": "../ingestion" }
-  ]
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }

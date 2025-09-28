@@ -1,9 +1,8 @@
 import type { DomainEvent, TranscriptionJob } from "@puredialog/domain"
 import { Context, Effect, Layer } from "effect"
-import { PubSubConfig } from "./Config.js"
+import { PubSubConfig, PubSubConfigLive } from "./Config.js"
 import { PubSubError } from "./errors.js"
-import { MessageAdapter, MessageAdapterLive } from "./internal/message-adapter.js"
-import { PubSubService } from "./internal/service.js"
+import { MessageAdapter, MessageAdapterLive, PubSubService, PubSubServiceLive } from "./internal/index.js"
 
 /** High-level Pub/Sub client focused on domain-oriented operations */
 export class PubSubClient extends Context.Tag("PubSubClient")<
@@ -26,11 +25,7 @@ const make = Effect.gen(function*() {
   const publishEvent: (
     event: DomainEvent
   ) => Effect.Effect<string, PubSubError> = (event) =>
-    Effect.gen(function*() {
-      const message = yield* adapter.encodeDomainEvent(event)
-
-      return message
-    }).pipe(
+    adapter.encodeDomainEvent(event).pipe(
       Effect.flatMap((message) => service.publish(config.topics.events, message)),
       Effect.tap(() => Effect.annotateCurrentSpan("pubsub.topic.name", config.topics.events)),
       Effect.tap(() => Effect.annotateCurrentSpan("pubsub.event.type", (event as any)._tag)),
@@ -41,10 +36,7 @@ const make = Effect.gen(function*() {
   const publishWorkMessage: (
     job: TranscriptionJob
   ) => Effect.Effect<string, PubSubError> = (job) =>
-    Effect.gen(function*() {
-      const message = yield* adapter.encodeWorkMessage(job)
-      return message
-    }).pipe(
+    adapter.encodeWorkMessage(job).pipe(
       Effect.flatMap((message) => service.publish(config.topics.work, message)),
       Effect.tap(() => Effect.annotateCurrentSpan("pubsub.topic.name", config.topics.work)),
       Effect.tap(() => Effect.annotateCurrentSpan("pubsub.event.type", "WorkMessage")),
@@ -58,4 +50,12 @@ const make = Effect.gen(function*() {
   } as const
 })
 
-export const PubSubClientLive = Layer.effect(PubSubClient, make).pipe(Layer.provide(MessageAdapterLive))
+export const PubSubClientLayer = Layer.effect(PubSubClient, make)
+
+const deps = Layer.mergeAll(
+  MessageAdapterLive,
+  PubSubServiceLive,
+  PubSubConfigLive
+)
+
+export const PubSubClientLive = PubSubClientLayer.pipe(Layer.provide(deps))

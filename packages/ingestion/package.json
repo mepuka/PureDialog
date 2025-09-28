@@ -12,7 +12,9 @@
     }
   },
   "scripts": {
+    "build": "tsc -b tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "tsc -b tsconfig.build.json --clean",
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
@@ -23,7 +25,8 @@
     "@google-cloud/storage": "^7.7.0",
     "@googleapis/youtube": "latest",
     "@puredialog/domain": "workspace:^",
-    "effect": "latest"
+    "effect": "latest",
+    "typescript": "~5.8.3"
   },
   "effect": {
     "generateExports": {

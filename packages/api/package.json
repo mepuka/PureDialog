@@ -11,9 +11,10 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -b tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/index.js",
+    "clean": "tsc -b tsconfig.json --clean",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "vitest"
@@ -32,8 +33,6 @@
   "devDependencies": {
     "typescript": "~5.8.2",
     "eslint": "^9.34.0",
-    "@puredialog/domain": "workspace:^",
-    "@puredialog/ingestion": "workspace:^",
     "@types/node": "^22.14.0",
     "@effect/vitest": "^0.24.1",
     "vitest": "^3.2.4"

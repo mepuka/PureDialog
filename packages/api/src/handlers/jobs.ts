@@ -1,44 +1,83 @@
 import { HttpApiBuilder } from "@effect/platform"
-import { MessageAdapter, MessageAdapterLive, PubSubClient, PubSubConfigLive } from "@puredialog/ingestion"
-import { Effect, Layer } from "effect"
+import { HttpApiDecodeError } from "@effect/platform/HttpApiError"
+import type { PubSubError } from "@puredialog/ingestion"
+import { PubSubClient, PubSubClientLive } from "@puredialog/ingestion"
+import { Effect, Layer, Option } from "effect"
 import { PureDialogApi } from "../api.js"
-import { ProcessingJobStore, ProcessingJobStoreMock } from "../services/JobStore.js"
-// import { generateIdempotencyKey, idempotencyKeyToString } from "../utils/idempotency.js"
-// import { createTranscriptionJob } from "../utils/job-creation.js"
+import type { RepositoryError } from "../errors.js"
+import { JobConflictError } from "../errors.js"
+import type { CreateJobRequest } from "../schemas.js"
+import { JobStore } from "../services/JobStore.js"
+import { createTranscriptionJob } from "../utils/job-creation.js"
 
 /**
- * Handler implementation requiring dependencies.
+ * Handler implementation for the 'jobs' group.
  */
-const jobsLive = HttpApiBuilder.group(PureDialogApi, "jobs", (handlers) =>
+
+const createJobHandler = (payload: CreateJobRequest) =>
   Effect.gen(function*() {
-    const _jobStore = yield* ProcessingJobStore
+    const store = yield* JobStore
+    const pubsub = yield* PubSubClient
+    // 1. Create the job entity from the request payload using the schema transform.
+    const job = yield* createTranscriptionJob(payload)
 
-    const _pubSubClient = yield* PubSubClient
+    // 2. Check for an existing job using the idempotency key from the created job.
+    if (job.idempotencyKey) {
+      const existingJob = yield* store.findJobByIdempotencyKey(
+        job.idempotencyKey
+      )
 
-    const _messageAdapter = yield* MessageAdapter
+      if (Option.isSome(existingJob)) {
+        yield* Effect.logInfo(
+          `Job already exists for idempotency key, returning conflict.`
+        )
+        // Fail with a typed error. The HttpApi layer will map this to a 409 response.
+        return yield* JobConflictError.make({
+          idempotencyKey: job.idempotencyKey,
+          message: "A job with this idempotency key already exists.",
+          cause: undefined
+        })
+      }
+    }
 
-    return handlers.handle("createJob", ({ payload }) =>
-      Effect.gen(function*() {
-        yield* Effect.logInfo(`Creating job with idempotency key: ${payload.idempotencyKey}`)
+    // 3. Persist the new job.
+    const persistedJob = yield* store.createJob(job) // 4. Publish the job to the ingestion queue.
 
-        // TODO: Implement full logic:
-        // 1. Check idempotency key
-        // 2. Create and persist job
-        // 3. Publish to PubSub
-        // 4. Return appropriate response
+    yield* pubsub
+      .publishWorkMessage(persistedJob)
 
-        yield* Effect.die("createJob handler not implemented")
-        return {
-          status: "accepted" as const,
-          statusCode: 202 as const,
-          job: {} as any,
-          message: "Not implemented"
-        }
-      }))
-  })).pipe(
-    Layer.provide(ProcessingJobStoreMock), // Will be replaced with real implementation
-    Layer.provide(PubSubConfigLive),
-    Layer.provide(MessageAdapterLive)
+    return persistedJob
+  }).pipe(
+    Effect.catchTags({
+      RepositoryError: (error: RepositoryError) =>
+        Effect.fail(
+          new HttpApiDecodeError({
+            message: error.message,
+            issues: []
+          })
+        ),
+      PubSubError: (error: PubSubError) =>
+        Effect.fail(
+          new HttpApiDecodeError({
+            message: error.message,
+            issues: []
+          })
+        ),
+      JobConflictError: (error: JobConflictError) =>
+        Effect.fail(
+          JobConflictError.make({
+            idempotencyKey: error.idempotencyKey,
+            message: error.message,
+            cause: undefined
+          })
+        )
+    })
   )
 
-export { jobsLive }
+const jobsApiLayer = HttpApiBuilder.group(
+  PureDialogApi,
+  "jobs",
+  (handlers) => handlers.handle("createJob", (request) => createJobHandler(request.payload))
+).pipe(Layer.provide(PubSubClientLive))
+
+export { jobsApiLayer }

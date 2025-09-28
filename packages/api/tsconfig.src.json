@@ -3,13 +3,8 @@
   "include": ["src"],
   "compilerOptions": {
     "types": ["node"],
-    "outDir": "build/esm",
     "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
     "rootDir": "src",
     "noEmit": true
-  },
-  "references": [
-    { "path": "../domain" },
-    { "path": "../ingestion" }
-  ]
+  }
 }

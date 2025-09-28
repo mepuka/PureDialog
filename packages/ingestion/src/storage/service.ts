@@ -1,6 +1,6 @@
 import { Storage } from "@google-cloud/storage"
 import { Context, Effect, Layer, Option, Schema } from "effect"
-import { CloudStorageConfig } from "./Config.js"
+import { CloudStorageConfig, CloudStorageConfigLive } from "./Config.js"
 import { CloudStorageError } from "./errors.js"
 
 /**
@@ -46,7 +46,7 @@ export class CloudStorageService extends Context.Tag("CloudStorageService")<
 /**
  * Live implementation using Google Cloud Storage client
  */
-export const CloudStorageServiceLive: Layer.Layer<CloudStorageService, never, CloudStorageConfig> = Layer.effect(
+export const CloudStorageServiceLive = Layer.effect(
   CloudStorageService,
   Effect.gen(function*() {
     const config = yield* CloudStorageConfig
@@ -119,4 +119,4 @@ export const CloudStorageServiceLive: Layer.Layer<CloudStorageService, never, Cl
         })
     }
   })
-)
+).pipe(Layer.provide(CloudStorageConfigLive))

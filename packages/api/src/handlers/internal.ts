@@ -1,34 +1,108 @@
 import { HttpApiBuilder } from "@effect/platform"
+import type { DomainEvent, TranscriptId, TranscriptionJob } from "@puredialog/domain"
+import type { MessageEncodingError } from "@puredialog/ingestion"
 import { MessageAdapter, MessageAdapterLive } from "@puredialog/ingestion"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Match, Option } from "effect"
+
+import { HttpApiDecodeError } from "@effect/platform/HttpApiError"
 import { PureDialogApi } from "../api.js"
-import { ProcessingJobStore, ProcessingJobStoreMock } from "./services/JobStore.js"
+import type { RepositoryError } from "../errors.js"
+import { JobNotFound } from "../errors.js"
+import { JobStore } from "../services/index.js"
+
+/**
+ * Handle transcription completion side-effects.
+ */
+const handleTranscriptionCompletion = (
+  job: TranscriptionJob,
+  transcriptId: TranscriptId
+) =>
+  Effect.logInfo(`Transcription completed for job: ${job.id}`, {
+    jobId: job.id,
+    transcriptId,
+    duration: Date.now() - job.createdAt.getTime()
+  })
+
+const processEvent = (event: DomainEvent) => {
+  if (event._tag === "JobQueued" || event._tag === "WorkMessage") {
+    return Effect.void
+  }
+
+  return Effect.gen(function*() {
+    const jobStore = yield* JobStore
+
+    // Find the job first, failing early if it doesn't exist.
+    const job = yield* jobStore.findJobById(event.jobId)
+
+    if (Option.isNone(job)) {
+      return yield* new JobNotFound({ jobId: event.jobId, message: "Job not found" })
+    }
+
+    // Now, handle the event since we know the job exists.
+    return yield* Match.value(event).pipe(
+      Match.tag("JobFailed", (e) => jobStore.updateJobStatus(job.value.id, "Failed", e.error)),
+      // TODO: handlde "handle dlq"
+      Match.tag("TranscriptComplete", (e) =>
+        jobStore
+          .updateJobStatus(job.value.id, "Completed", undefined, e.transcript.id)
+          .pipe(
+            Effect.tap((updatedJob) => handleTranscriptionCompletion(updatedJob, e.transcript.id))
+          )),
+      Match.tag("JobStatusChanged", (e) => jobStore.updateJobStatus(job.value.id, e.to)),
+      Match.exhaustive
+    )
+  })
+}
 
 /**
  * Handler for Pub/Sub push messages.
  */
-const internalLive = HttpApiBuilder.group(PureDialogApi, "internal", (handlers) =>
+const internalLayer = HttpApiBuilder.group(PureDialogApi, "internal", (handlers) =>
   Effect.gen(function*() {
-    const _jobStore = yield* ProcessingJobStore
-
-    const _messageAdapter = yield* MessageAdapter
+    const messageAdapter = yield* MessageAdapter
 
     return handlers.handle("jobUpdate", ({ payload }) =>
       Effect.gen(function*() {
-        yield* Effect.logInfo(`Received job update push message: ${payload.message.messageId}`)
+        yield* Effect.logInfo(
+          `Received job update push message: ${payload.message.messageId}`
+        )
 
-        // TODO: Implement full logic:
-        // 1. Decode base64 data field
-        // 2. Parse job update payload
-        // 3. Update job status in storage
-        // 4. Handle errors appropriately
+        const domainEvent = yield* messageAdapter.decodeDomainEvent(
+          payload.message
+        )
 
-        yield* Effect.die("jobUpdate handler not implemented")
-        return { received: true }
-      }))
-  })).pipe(
-    Layer.provide(ProcessingJobStoreMock),
-    Layer.provide(MessageAdapterLive)
-  )
+        yield* processEvent(domainEvent)
 
-export { internalLive }
+        return { received: true, processed: true }
+      }).pipe(
+        Effect.catchTags({
+          JobNotFound: (e: JobNotFound) =>
+            new HttpApiDecodeError({
+              message: e.message,
+              issues: []
+            }),
+          MessageEncodingError: (e: MessageEncodingError) =>
+            Effect.logWarning("Failed to decode message", e).pipe(
+              Effect.andThen(() =>
+                Effect.succeed({
+                  received: true,
+                  processed: false,
+                  reason: "Message encoding error"
+                })
+              )
+            ),
+          RepositoryError: (e: RepositoryError) =>
+            Effect.logError("Database error during job update", e).pipe(
+              Effect.andThen(() =>
+                Effect.succeed({
+                  received: true,
+                  processed: false,
+                  reason: "Database error"
+                })
+              )
+            )
+        })
+      ))
+  })).pipe(Layer.provide(MessageAdapterLive))
+
+export { internalLayer }

@@ -1,6 +1,6 @@
 import type { MediaResource } from "@puredialog/domain"
 import { Data, Effect, Hash } from "effect"
-import { ValidationError } from "../errors.js"
+import { generateRequestId } from "./job-creation.js"
 
 /**
  * Idempotency key composition using Effect Data for value-based equality
@@ -12,67 +12,39 @@ export class IdempotencyKey extends Data.TaggedClass("IdempotencyKey")<{
 }> {}
 
 /**
- * Validate user-provided idempotency key format
- */
-export const validateUserKey = (userKey: string): Effect.Effect<string, ValidationError> =>
-  Effect.gen(function*() {
-    // Check length (1-128 characters)
-    if (userKey.length < 1 || userKey.length > 128) {
-      return yield* Effect.fail(ValidationError.invalidUserKey(
-        `Idempotency key must be 1-128 characters, got ${userKey.length}`,
-        userKey
-      ))
-    }
-
-    // Check format (alphanumeric, hyphens, underscores)
-    const validPattern = /^[a-zA-Z0-9_-]+$/
-    if (!validPattern.test(userKey)) {
-      return yield* Effect.fail(ValidationError.invalidUserKey(
-        "Idempotency key must contain only alphanumeric characters, hyphens, and underscores",
-        userKey
-      ))
-    }
-
-    return userKey
-  })
-
-/**
  * Generate deterministic hash of media resource for uniqueness using Effect Hash
  */
-export const generateMediaHash = (media: MediaResource): Effect.Effect<string, never> =>
-  Effect.sync(() => {
-    // Extract media URL for hashing
-    const mediaUrl = extractMediaUrl(media)
+export const generateMediaHash = (media: MediaResource): string => {
+  // Extract media URL for hashing
+  const mediaUrl = extractMediaUrl(media)
 
-    // Use Effect's Hash module to generate hash from URL
-    const hashValue = Hash.hash(mediaUrl)
+  // Use Effect's Hash module to generate hash from URL
+  const hashValue = Hash.hash(mediaUrl)
 
-    // Convert to hex string and take first 16 characters
-    return Math.abs(hashValue).toString(16).substring(0, 16)
-  })
+  // Convert to hex string and take first 16 characters
+  return Math.abs(hashValue).toString(16).substring(0, 16)
+}
 
 /**
  * Generate complete idempotency key from components using Effect Data
  */
 export const generateIdempotencyKey = (
-  userKey: string,
   endpoint: string,
   media: MediaResource
-): Effect.Effect<IdempotencyKey, ValidationError> =>
-  Effect.gen(function*() {
-    // Validate user key format
-    const validatedKey = yield* validateUserKey(userKey)
+): IdempotencyKey => {
+  // Validate user key format
+  const userKey = generateRequestId() // random uuidk
 
-    // Generate deterministic hash of media resource
-    const mediaHash = yield* generateMediaHash(media)
+  // Generate deterministic hash of media resource
+  const mediaHash = generateMediaHash(media)
 
-    // Create idempotency key using Effect Data for value-based equality
-    return new IdempotencyKey({
-      requestKey: validatedKey,
-      endpoint,
-      mediaHash
-    })
+  // Create idempotency key using Effect Data for value-based equality
+  return new IdempotencyKey({
+    requestKey: userKey,
+    endpoint,
+    mediaHash
   })
+}
 
 /**
  * Extract media URL for idempotency mapping using Effect Data

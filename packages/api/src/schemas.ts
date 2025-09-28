@@ -1,51 +1,38 @@
-import {
-  JobId,
-  JobStatus,
-  MediaResource,
-  TranscriptId,
-  TranscriptionContext,
-  TranscriptionJob
-} from "@puredialog/domain"
+import { MediaResource, TranscriptionContext, TranscriptionJob } from "@puredialog/domain"
 import { Schema } from "effect"
 
 // --- Public API Schemas ---
 
 /**
- * Job creation request (uses domain types).
+ * Request schema for creating a new transcription job.
  */
-const CreateJobRequest = Schema.Struct({
+export type CreateJobRequest = Schema.Schema.Type<typeof CreateJobRequest>
+export const CreateJobRequest = Schema.Struct({
   media: MediaResource,
-  idempotencyKey: Schema.String,
-
+  idempotencyKey: Schema.optional(Schema.String),
   transcriptionContext: Schema.optional(TranscriptionContext)
 })
 
 /**
- * Success response schemas for job creation.
+ * Response schema for a successfully accepted job (202).
  */
-const JobAccepted = Schema.Struct({
-  status: Schema.Literal("accepted"),
-  statusCode: Schema.Literal(202),
-  job: TranscriptionJob,
-  message: Schema.String
-})
+export const JobAccepted = TranscriptionJob
 
-const JobAlreadyExists = Schema.Struct({
-  status: Schema.Literal("exists"),
-  statusCode: Schema.Literal(409),
-  job: TranscriptionJob,
-  message: Schema.String
-})
+/**
+ * Response schema for a job that already exists (409).
+ */
+export const JobConflict = TranscriptionJob
 
 /**
  * Health check response.
  */
-const HealthStatus = Schema.Struct({
+export type HealthStatus = Schema.Schema<typeof HealthStatus>
+export const HealthStatus = Schema.Struct({
   status: Schema.Literal("healthy"),
-  timestamp: Schema.DateFromString,
+  timestamp: Schema.Date,
   services: Schema.Struct({
-    pubsub: Schema.Literal("connected"),
-    storage: Schema.Literal("connected")
+    pubsub: Schema.Literal("connected", "disconnected"),
+    storage: Schema.Literal("connected", "disconnected")
   })
 })
 
@@ -54,23 +41,23 @@ const HealthStatus = Schema.Struct({
 /**
  * Pub/Sub push message format as received from Google Cloud Pub/Sub.
  */
-const PubSubPushMessage = Schema.Struct({
+export type PubSubPushMessage = Schema.Schema<typeof PubSubPushMessage>
+export const PubSubPushMessage = Schema.Struct({
   message: Schema.Struct({
-    data: Schema.String, // base64 encoded
+    data: Schema.instanceOf(Buffer), // base64 encoded
     messageId: Schema.String,
-    publishTime: Schema.DateFromString
+    publishTime: Schema.DateFromString,
+    attributes: Schema.Record({ key: Schema.String, value: Schema.String })
   }),
   subscription: Schema.String
 })
 
 /**
- * Job status update payload (decoded from data field of PubSub message).
+ * Response for the internal job update handler.
  */
-const JobUpdatePayload = Schema.Struct({
-  jobId: JobId,
-  status: JobStatus,
-  error: Schema.optional(Schema.String),
-  transcriptId: Schema.optional(TranscriptId)
+export type InternalUpdateResponse = Schema.Schema<typeof InternalUpdateResponse>
+export const InternalUpdateResponse = Schema.Struct({
+  received: Schema.Boolean,
+  processed: Schema.Boolean,
+  reason: Schema.optional(Schema.String)
 })
-
-export { CreateJobRequest, HealthStatus, JobAccepted, JobAlreadyExists, JobUpdatePayload, PubSubPushMessage }

@@ -113,6 +113,9 @@ importers:
       '@puredialog/ingestion':
         specifier: workspace:^
         version: link:../ingestion
+      '@puredialog/storage':
+        specifier: workspace:^
+        version: link:../storage
       effect:
         specifier: ^3.17.14
         version: 3.17.14
@@ -165,6 +168,9 @@ importers:
       effect:
         specifier: latest
         version: 3.17.14
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
     devDependencies:
       '@tim-smart/openapi-gen':
         specifier: ^0.4.13
@@ -193,6 +199,34 @@ importers:
       effect:
         specifier: latest
         version: 3.17.14
+
+  packages/storage:
+    dependencies:
+      '@puredialog/domain':
+        specifier: workspace:^
+        version: link:../domain
+      '@puredialog/ingestion':
+        specifier: workspace:^
+        version: link:../ingestion
+      effect:
+        specifier: ^3.17.14
+        version: 3.17.14
+    devDependencies:
+      '@effect/vitest':
+        specifier: ^0.24.1
+        version: 0.24.1(effect@3.17.14)(vitest@3.2.4(@types/node@22.18.6)(tsx@4.20.6)(yaml@2.8.1))
+      '@types/node':
+        specifier: ^22.14.0
+        version: 22.18.6
+      eslint:
+        specifier: ^9.34.0
+        version: 9.36.0
+      typescript:
+        specifier: ~5.8.2
+        version: 5.8.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@22.18.6)(tsx@4.20.6)(yaml@2.8.1)
 
   packages/worker-metadata:
     dependencies:

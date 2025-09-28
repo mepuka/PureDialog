@@ -22,13 +22,13 @@ const handleTranscriptionCompletion = (
     duration: Date.now() - job.createdAt.getTime()
   })
 
-const processEvent = (event: DomainEvent) => {
+export const processEvent = (event: DomainEvent) => {
   if (event._tag === "JobQueued" || event._tag === "WorkMessage") {
     return Effect.void
   }
 
   return Effect.gen(function*() {
-    const jobStore = yield* JobStore;
+    const jobStore = yield* JobStore
     const job = yield* jobStore.findJobById(event.jobId).pipe(
       Effect.flatMap(
         Option.match({
@@ -36,7 +36,7 @@ const processEvent = (event: DomainEvent) => {
           onNone: () => Effect.fail(new JobNotFound({ jobId: event.jobId, message: "Job not found" }))
         })
       )
-    );
+    )
 
     return yield* Match.value(event).pipe(
       Match.tag("JobFailed", (e) => jobStore.updateJobStatus(job.id, "Failed", e.error)),
@@ -49,9 +49,9 @@ const processEvent = (event: DomainEvent) => {
           )),
       Match.tag("JobStatusChanged", (e) => jobStore.updateJobStatus(job.id, e.to)),
       Match.exhaustive
-    );
-  });
-};
+    )
+  })
+}
 
 /**
  * Handler for Pub/Sub push messages.

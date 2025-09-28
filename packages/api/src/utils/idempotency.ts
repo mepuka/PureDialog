@@ -74,13 +74,13 @@ export const idempotencyKeyToString = (key: IdempotencyKey): string =>
   `${key.requestKey}:${key.endpoint}:${key.mediaHash}`
 
 export const idempotencyKeyFromString = (key: string): IdempotencyKey => {
-  const parts = key.split(":");
+  const parts = key.split(":")
   return new IdempotencyKey({
     requestKey: parts[0],
     endpoint: parts[1],
-    mediaHash: parts[2],
-  });
-};
+    mediaHash: parts[2]
+  })
+}
 
 /**
  * Check if idempotency record is expired (24 hours)

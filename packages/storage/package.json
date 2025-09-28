@@ -1,0 +1,33 @@
+{
+  "name": "@puredialog/storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./build/dts/index.d.ts",
+      "module": "./build/esm/index.js",
+      "default": "./build/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "tsc -b tsconfig.json --clean",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@puredialog/domain": "workspace:^",
+    "@puredialog/ingestion": "workspace:^",
+    "effect": "^3.17.14"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2",
+    "eslint": "^9.34.0",
+    "@types/node": "^22.14.0",
+    "@effect/vitest": "^0.24.1",
+    "vitest": "^3.2.4"
+  }
+}

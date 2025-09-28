@@ -119,7 +119,6 @@ export const MediaMetadata = Schema.Struct({
       })
     )
   ).pipe(
-    Schema.minItems(1),
     Schema.annotations({
       description: "Keywords/tags that describe the content of the media resource e.g. 'AI', 'Technology'"
     })
@@ -133,7 +132,6 @@ export const MediaMetadata = Schema.Struct({
       })
     )
   ).pipe(
-    Schema.minItems(1),
     Schema.annotations({
       description: "The industries or topic domains of the media resource e.g. 'AI', 'Technology'"
     })

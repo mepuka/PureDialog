@@ -1,6 +1,12 @@
 import type { MediaResource } from "@puredialog/domain"
 import { Data, Effect, Hash } from "effect"
-import { generateRequestId } from "./job-creation.js"
+
+/**
+ * Generate random request ID for idempotency keys
+ */
+const generateRequestId = (): string => {
+  return `req_${Math.random().toString(36).substring(2, 15)}`
+}
 
 /**
  * Idempotency key composition using Effect Data for value-based equality

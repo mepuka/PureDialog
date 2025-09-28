@@ -13,12 +13,7 @@ import {
   YouTubeVideoResource
 } from "@puredialog/domain"
 import { Effect } from "effect"
-import {
-  decodeDomainEvent,
-  decodeWorkMessage,
-  encodeDomainEvent,
-  encodeWorkMessage
-} from "../src/pubsub/MessageAdapter.js"
+import { MessageAdapter, MessageAdapterLive } from "../src/pubsub/internal/message-adapter.js"
 
 const emulatorEndpoint = process.env.PUBSUB_EMULATOR_HOST ?? "127.0.0.1:8085"
 const projectId = "pubsub-test-project"

@@ -1,2 +1,2 @@
-export * from "./JobRepository.js"
-export * from "./JobStore.js"
+// Re-export storage services for backward compatibility
+export * from "@puredialog/storage"

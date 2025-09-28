@@ -28,6 +28,7 @@
     "@effect/workflow": "^0.6.0",
     "@puredialog/domain": "workspace:^",
     "@puredialog/ingestion": "workspace:^",
+    "@puredialog/storage": "workspace:^",
     "effect": "^3.17.14"
   },
   "devDependencies": {

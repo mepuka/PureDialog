@@ -4,8 +4,8 @@ import type { MessageEncodingError } from "@puredialog/ingestion"
 import { MessageAdapter, MessageAdapterLive } from "@puredialog/ingestion"
 import { Effect, Layer, Match, Option } from "effect"
 
+import type { RepositoryError } from "@puredialog/storage"
 import { PureDialogApi } from "../api.js"
-import type { RepositoryError } from "../errors.js"
 import { JobNotFound } from "../errors.js"
 import { JobStore } from "../services/index.js"
 

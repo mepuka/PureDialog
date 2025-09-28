@@ -1,5 +1,4 @@
 import { assert, describe, it } from "@effect/vitest"
-import { Effect } from "effect"
 import {
   extractMediaUrl,
   generateIdempotencyKey,
@@ -9,7 +8,8 @@ import {
   idempotencyKeyFromString,
   idempotencyKeyToString,
   isIdempotencyExpired
-} from "../../src/utils/idempotency.js"
+} from "@puredialog/storage"
+import { Effect } from "effect"
 import { createAlternateMediaResource, createTestMediaResource } from "./fixtures/jobs.js"
 
 describe("Idempotency Logic", () => {

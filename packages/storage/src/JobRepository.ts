@@ -2,8 +2,8 @@ import type { JobStatus, TranscriptId } from "@puredialog/domain"
 import { JobId, TranscriptionJob } from "@puredialog/domain"
 import { CloudStorageConfig, CloudStorageService } from "@puredialog/ingestion"
 import { Context, Data, Effect, Layer, Option } from "effect"
-import { hashIdempotencyKey, idempotencyKeyFromString } from "../utils/idempotency.js"
-import { Index } from "./storage/indices.js"
+import { Index } from "./indices.js"
+import { hashIdempotencyKey, idempotencyKeyFromString } from "./utils/idempotency.js"
 
 // --- REPOSITORY INTERFACE ---
 export interface JobRepositoryInterface {

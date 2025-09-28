@@ -1,9 +1,9 @@
 import { TranscriptionJob } from "@puredialog/domain"
 import type { JobId, RequestId } from "@puredialog/domain"
+import { generateIdempotencyKey, idempotencyKeyToString } from "@puredialog/storage"
 import { Effect } from "effect"
 import { randomUUID } from "node:crypto"
 import type { CreateJobRequest } from "../schemas.js"
-import { generateIdempotencyKey, idempotencyKeyToString } from "./idempotency.js"
 
 /**
  * Generate unique job ID

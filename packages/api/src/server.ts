@@ -1,5 +1,6 @@
 import { HttpApiBuilder, HttpServer } from "@effect/platform"
 import { NodeHttpServer } from "@effect/platform-node"
+import { StoreLayer } from "@puredialog/storage"
 import { Layer } from "effect"
 import { createServer } from "node:http"
 import { PureDialogApi } from "./api.js"
@@ -7,7 +8,6 @@ import { ApiConfigLive } from "./config.js"
 import { healthLive } from "./handlers/health.js"
 import { internalLayer } from "./handlers/internal.js"
 import { jobsApiLayer } from "./handlers/jobs.js"
-import { StoreLayer } from "./services/index.js"
 
 const ApiLive = HttpApiBuilder.api(PureDialogApi)
 

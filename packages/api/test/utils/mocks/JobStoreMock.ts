@@ -1,7 +1,7 @@
 import type { JobId, JobStatus, TranscriptId, TranscriptionJob } from "@puredialog/domain"
+import { RepositoryError } from "@puredialog/storage"
+import { JobStore, type ProcessingJobStoreInterface } from "@puredialog/storage"
 import { Effect, Layer, Option } from "effect"
-import { RepositoryError } from "../../../src/errors.js"
-import { JobStore, type ProcessingJobStoreInterface } from "../../../src/services/JobStore.js"
 
 /**
  * Mock JobStore with state capture for testing

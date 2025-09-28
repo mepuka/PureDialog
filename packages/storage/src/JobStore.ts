@@ -2,8 +2,7 @@ import type { JobId, JobStatus, TranscriptId } from "@puredialog/domain"
 import { TranscriptionJob } from "@puredialog/domain"
 import { CloudStorageConfigLive, CloudStorageServiceLive } from "@puredialog/ingestion"
 import { Context, Effect, Layer, Option } from "effect"
-import { RepositoryError } from "../errors.js"
-import { JobRepository, JobRepositoryLayer } from "./JobRepository.js"
+import { JobRepository, JobRepositoryLayer, RepositoryError } from "./JobRepository.js"
 
 /**
  * Job store interface for managing transcription jobs

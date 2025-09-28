@@ -1,4 +1,3 @@
-import type { JobId } from "@puredialog/domain"
 import { Data, Schema } from "effect"
 
 export class ValidationError extends Data.TaggedError("ValidationError")<{
@@ -21,20 +20,7 @@ export class ValidationError extends Data.TaggedError("ValidationError")<{
   }
 }
 
-export class RepositoryError extends Data.TaggedError("RepositoryError")<{
-  readonly message: string
-  readonly operation: string
-  readonly jobId?: JobId
-  readonly cause?: unknown
-}> {
-  static jobNotFound(jobId: JobId) {
-    return new RepositoryError({
-      message: `Job not found: ${jobId}`,
-      operation: "findById",
-      jobId
-    })
-  }
-}
+// RepositoryError is now exported from @puredialog/storage
 
 // --- Error Response Schemas ---
 

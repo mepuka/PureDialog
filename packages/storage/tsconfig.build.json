@@ -1,8 +1,18 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.src.json",
   "compilerOptions": {
-    "noEmit": false
+    "types": ["node"],
+    "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
+    "outDir": "build/esm",
+    "noEmit": false,
+    "composite": true,
+    "declarationDir": "build/dts",
+    "stripInternal": true
   },
+  "references": [
+    { "path": "../domain/tsconfig.build.json" },
+    { "path": "../ingestion/tsconfig.build.json" }
+  ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

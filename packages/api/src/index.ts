@@ -1,3 +1,1 @@
-import { main } from "./server.js"
-
-export { main }
+export { main } from "./server.js"

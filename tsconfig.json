@@ -8,12 +8,14 @@
     "**/vitest.config.d.ts.map"
   ],
   "references": [
-    { "path": "packages/domain" },
-    { "path": "packages/ingestion" },
-    { "path": "packages/llm" },
-    { "path": "packages/api" },
-    { "path": "packages/worker-metadata" },
-    { "path": "packages/worker-transcription" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/storage" },
+    { "path": "./packages/ingestion" },
+    { "path": "./packages/llm" },
+    { "path": "./packages/api" },
+    { "path": "./packages/worker-metadata" },
+    { "path": "./packages/worker-transcription" },
+    { "path": "./packages/infra" }
   ]
 }
 

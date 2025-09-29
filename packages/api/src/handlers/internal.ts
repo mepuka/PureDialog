@@ -1,112 +1,131 @@
 import { HttpApiBuilder } from "@effect/platform"
-import type { DomainEvent, TranscriptId, TranscriptionJob } from "@puredialog/domain"
-import type { MessageEncodingError } from "@puredialog/ingestion"
-import { MessageAdapter, MessageAdapterLive } from "@puredialog/ingestion"
-import { Effect, Layer, Match, Option } from "effect"
-
-import type { RepositoryError } from "@puredialog/storage"
-import { PureDialogApi } from "../api.js"
-import { JobNotFound } from "../errors.js"
-import { JobStore } from "../services/index.js"
+import { Jobs } from "@puredialog/domain"
+import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
+import { Index } from "@puredialog/storage"
+import { Effect, Layer } from "effect"
+import { PureDialogApi } from "./api.js"
 
 /**
- * Handle transcription completion side-effects.
+ * GCS Event payload structure from Eventarc.
  */
-const handleTranscriptionCompletion = (
-  job: TranscriptionJob,
-  transcriptId: TranscriptId
-) =>
-  Effect.logInfo(`Transcription completed for job: ${job.id}`, {
-    jobId: job.id,
-    transcriptId,
-    duration: Date.now() - job.createdAt.getTime()
-  })
-
-export const processEvent = (event: DomainEvent) => {
-  if (event._tag === "JobQueued" || event._tag === "WorkMessage") {
-    return Effect.void
-  }
-
-  return Effect.gen(function*() {
-    const jobStore = yield* JobStore
-    const job = yield* jobStore.findJobById(event.jobId).pipe(
-      Effect.flatMap(
-        Option.match({
-          onSome: (job) => Effect.succeed(job),
-          onNone: () => Effect.fail(new JobNotFound({ jobId: event.jobId, message: "Job not found" }))
-        })
-      )
-    )
-
-    return yield* Match.value(event).pipe(
-      Match.tag("JobFailed", (e) => jobStore.updateJobStatus(job.id, "Failed", e.error)),
-      // TODO: handlde "handle dlq"
-      Match.tag("TranscriptComplete", (e) =>
-        jobStore
-          .updateJobStatus(job.id, "Completed", undefined, e.transcript.id)
-          .pipe(
-            Effect.tap((updatedJob) => handleTranscriptionCompletion(updatedJob, e.transcript.id))
-          )),
-      Match.tag("JobStatusChanged", (e) => jobStore.updateJobStatus(job.id, e.to)),
-      Match.exhaustive
-    )
-  })
+interface GcsEvent {
+  readonly bucket: string
+  readonly name: string
+  readonly generation: string
+  readonly eventTime: string
+  readonly eventType: string
 }
 
 /**
- * Handler for Pub/Sub push messages.
+ * Extract GCS event data from Eventarc PubSub message.
+ * Eventarc wraps GCS events in PubSub messages with the event data in attributes.
  */
-const internalLayer = HttpApiBuilder.group(PureDialogApi, "internal", (handlers) =>
-  Effect.gen(function*() {
-    const messageAdapter = yield* MessageAdapter
+const extractGcsEventFromPubSub = (pubsubMessage: any): GcsEvent => {
+  const attributes = pubsubMessage.message?.attributes || {}
+  return {
+    bucket: attributes.bucketId || "",
+    name: attributes.objectName || "",
+    generation: attributes.objectGeneration || "",
+    eventTime: attributes.eventTime || new Date().toISOString(),
+    eventType: attributes.eventType || ""
+  }
+}
 
-    return handlers.handle("jobUpdate", ({ payload }) =>
+/**
+ * Handle external notifications for completed jobs.
+ * In the new architecture: write domain events to GCS event store instead of PubSub.
+ */
+const handleCompletedJobNotification = (jobId: string, eventTime: Date) =>
+  Effect.gen(function*() {
+    const storage = yield* IngestionLayer.CloudStorageService
+    const config = yield* Config.CloudStorageConfig
+
+    // Create domain event for job completion
+    const domainEvent = Jobs.JobStatusChanged.make({
+      jobId: jobId as any,
+      requestId: "external-notification" as any, // Placeholder for external notifications
+      from: "Processing",
+      to: "Completed",
+      occurredAt: eventTime
+    })
+
+    // Write domain event to GCS event store (instead of PubSub)
+    const eventId = `${Date.now()}_job_completed`
+    const eventPath = Index.event(jobId as any, eventId)
+    yield* storage.putObject(config.bucket, eventPath, domainEvent)
+
+    yield* Effect.logInfo(`Stored domain event in GCS: JobStatusChanged to Completed`, {
+      jobId,
+      eventPath,
+      eventTime: eventTime.toISOString()
+    })
+
+    return domainEvent
+  })
+
+/**
+ * Handle notification events from Eventarc for external broadcasting.
+ * Only processes jobs/Completed/* events to notify external systems.
+ */
+const handleNotificationEvent = (gcsEvent: GcsEvent) =>
+  Effect.gen(function*() {
+    const filePath = gcsEvent.name
+    const eventTime = new Date(gcsEvent.eventTime)
+
+    yield* Effect.logInfo("Processing notification event from Eventarc", {
+      bucket: gcsEvent.bucket,
+      path: filePath,
+      eventTime: eventTime.toISOString()
+    })
+
+    // Extract jobId from jobs/Completed/{jobId}.json pattern
+    const completedJobMatch = filePath.match(/^jobs\/Completed\/([^/]+)\.json$/)
+
+    if (completedJobMatch) {
+      const jobId = completedJobMatch[1]
+      yield* handleCompletedJobNotification(jobId, eventTime)
+    } else {
+      yield* Effect.logDebug(`Ignoring non-completed job event: ${filePath}`)
+    }
+
+    return { processed: true }
+  })
+
+/**
+ * Handler for State-Triggered Choreography notifications.
+ * Only handles external notifications when jobs complete.
+ */
+const internalLayer = HttpApiBuilder.group(
+  PureDialogApi,
+  "internal",
+  (handlers) =>
+    handlers.handle("notifications", ({ payload }) =>
       Effect.gen(function*() {
         yield* Effect.logInfo(
-          `Received job update push message: ${payload.message.messageId}`
+          `Received notification push message: ${payload.message?.messageId || "unknown"}`
         )
 
-        const domainEvent = yield* messageAdapter.decodeDomainEvent(
-          payload.message
-        )
+        // Extract GCS event from Eventarc PubSub wrapper
+        const gcsEvent = extractGcsEventFromPubSub(payload)
+        const result = yield* handleNotificationEvent(gcsEvent)
 
-        yield* processEvent(domainEvent)
-
-        return { received: true, processed: true }
+        return {
+          received: true,
+          processed: result.processed,
+          timestamp: new Date().toISOString()
+        }
       }).pipe(
-        Effect.catchTags({
-          JobNotFound: (e: JobNotFound) =>
-            Effect.logWarning(e.message, e).pipe(
-              Effect.andThen(() =>
-                Effect.succeed({
-                  received: true,
-                  processed: false,
-                  reason: e.message
-                })
-              )
-            ),
-          MessageEncodingError: (e: MessageEncodingError) =>
-            Effect.logWarning("Failed to decode message", e).pipe(
-              Effect.andThen(() =>
-                Effect.succeed({
-                  received: true,
-                  processed: false,
-                  reason: "Message encoding error"
-                })
-              )
-            ),
-          RepositoryError: (e: RepositoryError) =>
-            Effect.logError("Database error during job update", e).pipe(
-              Effect.andThen(() =>
-                Effect.succeed({
-                  received: true,
-                  processed: false,
-                  reason: "Database error"
-                })
-              )
-            )
-        })
+        Effect.catchAll((error: unknown) =>
+          Effect.gen(function*() {
+            yield* Effect.logError("Unexpected error processing notification event", error)
+            return {
+              received: true,
+              processed: false,
+              reason: "Unexpected error"
+            }
+          })
+        )
       ))
-  })).pipe(Layer.provide(MessageAdapterLive))
+).pipe(Layer.provide(Layer.merge(IngestionLayer.CloudStorageLayer, Config.CloudStorageConfigLayer)))
 
 export { internalLayer }

@@ -6,5 +6,12 @@
     "outDir": "build/esm",
     "declarationDir": "build/dts",
     "stripInternal": true
-  }
+  },
+  "references": [
+    { "path": "../domain/tsconfig.build.json" },
+    { "path": "../ingestion/tsconfig.build.json" },
+    { "path": "../storage/tsconfig.build.json" }
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }

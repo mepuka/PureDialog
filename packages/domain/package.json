@@ -11,9 +11,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
-    "clean": "tsc -b tsconfig.json --clean",
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "tsc -b tsconfig.build.json --clean",
     "test": "vitest",
     "coverage": "vitest --coverage"
   },

@@ -1,0 +1,7 @@
+*.md
+*.d.ts
+*.js
+*.map
+*.tsbuildinfo
+spec.json
+youtube_client.ts

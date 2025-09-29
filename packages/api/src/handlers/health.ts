@@ -1,6 +1,7 @@
 import { HttpApiBuilder } from "@effect/platform"
 import { Effect } from "effect"
-import { PureDialogApi } from "../api.js"
+import { HealthStatus } from "../schemas.js"
+import { PureDialogApi } from "./api.js"
 
 const healthLive = HttpApiBuilder.group(
   PureDialogApi,
@@ -11,14 +12,14 @@ const healthLive = HttpApiBuilder.group(
         // Check service connectivity
         yield* Effect.logInfo("Health check requested")
 
-        return {
+        return HealthStatus.make({
           status: "healthy" as const,
           timestamp: new Date(),
           services: {
             pubsub: "connected" as const,
             storage: "connected" as const
           }
-        }
+        })
       }))
 )
 

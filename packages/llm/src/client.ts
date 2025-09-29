@@ -1,5 +1,5 @@
 import { ApiError, GoogleGenAI, MediaResolution } from "@google/genai"
-import { MediaMetadata, videoIdToWatchUrl, YouTubeVideo } from "@puredialog/domain"
+import { Media, YouTube } from "@puredialog/domain"
 import { Context, Effect, Layer, Option, Redacted, Schema, Stream } from "effect"
 import { GeminiConfig } from "./config.js"
 import { GoogleApiError } from "./errors.js"
@@ -7,19 +7,19 @@ import { hints, instructions, systemInstruction } from "./prompts/transcribe_med
 
 export type TranscribeYoutubeVideoOptions = Schema.Schema.Type<typeof TranscribeYoutubeVideoOptions>
 export const TranscribeYoutubeVideoOptions = Schema.Struct({
-  video: YouTubeVideo,
-  mediaMetadata: MediaMetadata
+  video: YouTube.YouTubeVideo,
+  mediaMetadata: Media.MediaMetadata
 })
 
 // Helper function to format content parts for the LLM call
 const _formatContentParts = (options: TranscribeYoutubeVideoOptions) => {
   const parts: Array<{ fileData: { fileUri: string } } | { text: string }> = [
-    { fileData: { fileUri: videoIdToWatchUrl(options.video.id) } }
+    { fileData: { fileUri: YouTube.videoIdToWatchUrl(options.video.id) } }
   ]
 
   // If we have media metadata, use the hints function to generate context
   if (options.mediaMetadata) {
-    const metadata = options.mediaMetadata as MediaMetadata
+    const metadata = options.mediaMetadata as Media.MediaMetadata
     const hintsText = hints(metadata)
     parts.push({ text: hintsText })
   }

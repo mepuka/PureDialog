@@ -31,31 +31,10 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": false,
     "strictNullChecks": true,
-    "baseUrl": ".",
     "target": "ES2022",
     "module": "NodeNext",
     "incremental": true,
     "removeComments": false,
-    "plugins": [{ "name": "@effect/language-service" }],
-    "paths": {
-      "@puredialog/llm": ["./packages/llm/src/index.js"],
-      "@puredialog/llm/*": ["./packages/llm/src/*.js"],
-      "@puredialog/llm/test/*": ["./packages/llm/test/*.js"],
-      "@puredialog/ingestion": ["./packages/ingestion/src/index.js"],
-      "@puredialog/ingestion/*": ["./packages/ingestion/src/*.js"],
-      "@puredialog/ingestion/test/*": ["./packages/ingestion/test/*.js"],
-      "@puredialog/worker-transcription": ["./packages/worker-transcription/src/index.js"],
-      "@puredialog/worker-transcription/*": ["./packages/worker-transcription/src/*.js"],
-      "@puredialog/worker-transcription/test/*": ["./packages/worker-transcription/test/*.js"],
-      "@puredialog/worker-metadata": ["./packages/worker-metadata/src/index.js"],
-      "@puredialog/worker-metadata/*": ["./packages/worker-metadata/src/*.js"],
-      "@puredialog/api": ["./packages/api/src/index.js"],
-      "@puredialog/api/*": ["./packages/api/src/*.js"],
-      "@puredialog/api/test/*": ["./packages/api/test/*.js"],
-      "@puredialog/worker-metadata/test/*": ["./packages/worker-metadata/test/*.js"],
-      "@puredialog/domain": ["./packages/domain/src/index.ts"],
-      "@puredialog/domain/*": ["./packages/domain/src/*.ts"],
-      "@puredialog/domain/test/*": ["./packages/domain/test/*.ts"]
-    }
+    "plugins": [{ "name": "@effect/language-service" }]
   }
 }

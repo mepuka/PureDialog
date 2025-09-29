@@ -1,4 +1,4 @@
-import { MediaResource, TranscriptionContext, TranscriptionJob } from "@puredialog/domain"
+import { Jobs, Media, Transcription } from "@puredialog/domain"
 import { Schema } from "effect"
 
 // --- Public API Schemas ---
@@ -8,20 +8,22 @@ import { Schema } from "effect"
  */
 export type CreateJobRequest = Schema.Schema.Type<typeof CreateJobRequest>
 export const CreateJobRequest = Schema.Struct({
-  media: MediaResource,
+  media: Media.MediaResource,
   idempotencyKey: Schema.optional(Schema.String),
-  transcriptionContext: Schema.optional(TranscriptionContext)
+  transcriptionContext: Schema.optional(Transcription.TranscriptionContext)
 })
 
 /**
  * Response schema for a successfully accepted job (202).
  */
-export const JobAccepted = TranscriptionJob
+export const JobAccepted = Jobs.TranscriptionJob
+export type JobAccepted = Schema.Schema.Type<typeof JobAccepted>
 
 /**
  * Response schema for a job that already exists (409).
  */
-export const JobConflict = TranscriptionJob
+export const JobConflict = Jobs.TranscriptionJob
+export type JobConflict = Schema.Schema.Type<typeof JobConflict>
 
 /**
  * Health check response.

@@ -1,23 +1,37 @@
-import { TranscriptionJob } from "@puredialog/domain"
-import type { JobId, RequestId } from "@puredialog/domain"
+import type { Core } from "@puredialog/domain"
+import { Jobs } from "@puredialog/domain"
 import { generateIdempotencyKey, idempotencyKeyToString } from "@puredialog/storage"
 import { Effect } from "effect"
 import { randomUUID } from "node:crypto"
 import type { CreateJobRequest } from "../schemas.js"
 
 /**
- * Generate unique job ID
+ * Standard ID Format Patterns:
+ * - JobId: job_${uuid}
+ * - RequestId: req_${uuid}
+ * - TranscriptId: trn_${uuid}
+ * - MediaResourceId: res_${uuid}
+ * - CorrelationId: cor_${uuid}
  */
-export const generateJobId = (): JobId => `job_${randomUUID()}` as JobId
 
 /**
- * Generate unique request ID
+ * Generate unique job ID with standard prefix
  */
-export const generateRequestId = (): RequestId => `req_${randomUUID()}` as RequestId
+export const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
+
+/**
+ * Generate unique request ID with standard prefix
+ */
+export const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
+
+/**
+ * Generate unique transcript ID with standard prefix
+ */
+export const generateTranscriptId = (): Core.TranscriptId => `trn_${randomUUID()}` as Core.TranscriptId
 
 export const createTranscriptionJob = (
   payload: CreateJobRequest
-): Effect.Effect<TranscriptionJob> =>
+): Effect.Effect<Jobs.TranscriptionJob> =>
   Effect.sync(() => {
     const jobId = generateJobId()
     const requestId = generateRequestId()
@@ -30,7 +44,7 @@ export const createTranscriptionJob = (
       idempotencyKeyString = idempotencyKeyToString(idempotencyKey)
     }
 
-    return new TranscriptionJob({
+    return new Jobs.TranscriptionJob({
       id: jobId,
       requestId,
       media: payload.media,

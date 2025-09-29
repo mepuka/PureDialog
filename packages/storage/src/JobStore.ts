@@ -1,47 +1,47 @@
-import type { JobId, JobStatus, TranscriptId } from "@puredialog/domain"
-import { TranscriptionJob } from "@puredialog/domain"
-import { CloudStorageConfigLive, CloudStorageServiceLive } from "@puredialog/ingestion"
-import { Context, Effect, Layer, Option } from "effect"
+import type { Core } from "@puredialog/domain"
+import { Jobs } from "@puredialog/domain"
+import { Config, Layer } from "@puredialog/ingestion"
+import { Context, Effect, Layer as EffectLayer, Option } from "effect"
 import { JobRepository, JobRepositoryLayer, RepositoryError } from "./JobRepository.js"
 
 /**
  * Job store interface for managing transcription jobs
  */
-export interface ProcessingJobStoreInterface {
+export interface JobStoreInterface {
   readonly createJob: (
-    job: TranscriptionJob
-  ) => Effect.Effect<TranscriptionJob, RepositoryError>
+    job: Jobs.TranscriptionJob
+  ) => Effect.Effect<Jobs.TranscriptionJob, RepositoryError>
   readonly findJobById: (
-    jobId: JobId
-  ) => Effect.Effect<Option.Option<TranscriptionJob>, RepositoryError>
+    jobId: Core.JobId
+  ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
   readonly findJobByIdempotencyKey: (
     key: string
-  ) => Effect.Effect<Option.Option<TranscriptionJob>, RepositoryError>
+  ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
   readonly updateJobStatus: (
-    jobId: JobId,
-    status: JobStatus,
+    jobId: Core.JobId,
+    status: Jobs.JobStatus,
     error?: string,
-    transcriptId?: TranscriptId
-  ) => Effect.Effect<TranscriptionJob, RepositoryError>
+    transcriptId?: Core.TranscriptId
+  ) => Effect.Effect<Jobs.TranscriptionJob, RepositoryError>
 }
 
 /**
- * Service tag for ProcessingJobStore
+ * Service tag for JobStore
  */
 export class JobStore extends Context.Tag("JobStore")<
   JobStore,
-  ProcessingJobStoreInterface
+  JobStoreInterface
 >() {}
 
 /**
  * Mock implementation for testing
  */
-export const JobStoreMock = Layer.sync(JobStore, () => {
-  const jobs = new Map<JobId, TranscriptionJob>()
-  const idempotencyMap = new Map<string, JobId>()
+export const JobStoreMock = EffectLayer.sync(JobStore, () => {
+  const jobs = new Map<Core.JobId, Jobs.TranscriptionJob>()
+  const idempotencyMap = new Map<string, Core.JobId>()
 
   return {
-    createJob: (job: TranscriptionJob) =>
+    createJob: (job: Jobs.TranscriptionJob) =>
       Effect.gen(function*() {
         if (job.idempotencyKey) {
           const existingJobId = idempotencyMap.get(job.idempotencyKey)
@@ -97,7 +97,7 @@ export const JobStoreMock = Layer.sync(JobStore, () => {
           )
         }
 
-        const updatedJob = new TranscriptionJob({
+        const updatedJob = Jobs.TranscriptionJob.make({
           ...existingJob,
           status,
           error,
@@ -116,7 +116,7 @@ export const JobStoreMock = Layer.sync(JobStore, () => {
 /**
  * Live implementation using JobRepository
  */
-const ProcessingJobStoreLayer = Layer.effect(
+const JobStoreLayer = EffectLayer.effect(
   JobStore,
   Effect.gen(function*() {
     const repository = yield* JobRepository
@@ -125,24 +125,26 @@ const ProcessingJobStoreLayer = Layer.effect(
       new RepositoryError({ message: error.message, operation: error.operation })
 
     return {
-      createJob: (job: TranscriptionJob) => repository.save(job).pipe(Effect.mapError(mapError)),
+      createJob: (job: Jobs.TranscriptionJob) => repository.createJob(job).pipe(Effect.mapError(mapError)),
 
-      findJobByIdempotencyKey: (key) => repository.findByIdempotencyKey(key).pipe(Effect.mapError(mapError)),
+      findJobByIdempotencyKey: (key) => repository.findJobByIdempotencyKey(key).pipe(Effect.mapError(mapError)),
 
       updateJobStatus: (jobId, status, error, transcriptId) =>
         repository
-          .updateStatus(jobId, status, error, transcriptId)
+          .updateJobStatus(jobId, status, error, transcriptId)
           .pipe(Effect.mapError(mapError)),
 
-      findJobById: (jobId) => repository.findById(jobId).pipe(Effect.mapError(mapError))
-    }
+      findJobById: (jobId) => repository.findJobById(jobId).pipe(Effect.mapError(mapError))
+    } as JobStoreInterface
   })
 )
 
 /**
  * Complete live layer that includes all dependencies
  */
+const deps = JobRepositoryLayer.pipe(
+  EffectLayer.provide(Config.CloudStorageConfigLayer),
+  EffectLayer.provideMerge(Layer.CloudStorageLayer)
+)
 
-const deps = JobRepositoryLayer.pipe(Layer.provide(CloudStorageConfigLive), Layer.provide(CloudStorageServiceLive))
-
-export const StoreLayer = ProcessingJobStoreLayer.pipe(Layer.provide(deps))
+export const JobStoreLayerLive = JobStoreLayer.pipe(EffectLayer.provide(deps))

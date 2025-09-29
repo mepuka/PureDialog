@@ -15,3 +15,5 @@ config:
   pubsub:transcriptionSubscription: work-transcription
   pubsub:eventsMonitorSubscription: events-monitor
   storage:bucketBaseName: ingestion-shared-artifacts
+  env:youtubeApiKey:
+    secure: AAABABrvCn7M5eVbUUHWEP2GRLJR5xvH6gA3jSOGOxWahIrEFwOw0NdlC1rvdXHf/PX3fnNYzB8UtQ/6YsEYmlpEWolzahc=

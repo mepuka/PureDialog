@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { JobId, LanguageCode, MediaMetadata, MediaResourceId, YouTubeVideo, YouTubeVideoId } from "@puredialog/domain"
-import { Cause, Console, Effect, Layer, Option } from "effect"
+import { Cause, Console, Effect, } from "effect"
 import { LLMService, LLMServiceLive } from "../src/service.js"
 import {listVideoresponse} from "./example_list_videos_response.json"
 import { GeminiConfig } from "../src/config.js"

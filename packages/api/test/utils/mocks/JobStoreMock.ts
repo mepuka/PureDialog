@@ -1,6 +1,6 @@
-import type { JobId, JobStatus, TranscriptId, TranscriptionJob } from "@puredialog/domain"
+import type { Core, Jobs } from "@puredialog/domain"
 import { RepositoryError } from "@puredialog/storage"
-import { JobStore, type ProcessingJobStoreInterface } from "@puredialog/storage"
+import { JobStore, type JobStoreInterface } from "@puredialog/storage"
 import { Effect, Layer, Option } from "effect"
 
 /**
@@ -9,7 +9,7 @@ import { Effect, Layer, Option } from "effect"
 
 export interface JobCapture {
   readonly operation: "create" | "update"
-  readonly job: TranscriptionJob
+  readonly job: Jobs.TranscriptionJob
   readonly timestamp: Date
 }
 
@@ -20,16 +20,16 @@ export interface QueryCapture {
 }
 
 export interface UpdateCapture {
-  readonly jobId: JobId
-  readonly newStatus: JobStatus
+  readonly jobId: Core.JobId
+  readonly newStatus: Jobs.JobStatus
   readonly error?: string
-  readonly transcriptId?: TranscriptId
+  readonly transcriptId?: Core.TranscriptId
   readonly timestamp: Date
 }
 
 export const createMockJobStore = () => {
-  const jobs = new Map<JobId, TranscriptionJob>()
-  const idempotencyMap = new Map<string, JobId>()
+  const jobs = new Map<Core.JobId, Jobs.TranscriptionJob>()
+  const idempotencyMap = new Map<string, Core.JobId>()
   const capturedJobs: Array<JobCapture> = []
   const capturedQueries: Array<QueryCapture> = []
   const capturedUpdates: Array<UpdateCapture> = []
@@ -42,8 +42,8 @@ export const createMockJobStore = () => {
     failingOperation = operation || null
   }
 
-  const mockImplementation: ProcessingJobStoreInterface = {
-    createJob: (job: TranscriptionJob) =>
+  const mockImplementation: JobStoreInterface = {
+    createJob: (job: Jobs.TranscriptionJob) =>
       Effect.gen(function*() {
         if (shouldFail && (!failingOperation || failingOperation === "createJob")) {
           return yield* Effect.fail(
@@ -85,7 +85,7 @@ export const createMockJobStore = () => {
         return job
       }),
 
-    findJobById: (jobId: JobId) =>
+    findJobById: (jobId: Core.JobId) =>
       Effect.gen(function*() {
         if (shouldFail && (!failingOperation || failingOperation === "findJobById")) {
           return yield* Effect.fail(
@@ -132,7 +132,7 @@ export const createMockJobStore = () => {
         return Option.fromNullable(job)
       }),
 
-    updateJobStatus: (jobId: JobId, status: JobStatus, error?: string, transcriptId?: TranscriptId) =>
+    updateJobStatus: (jobId: Core.JobId, status: Jobs.JobStatus, error?: string, transcriptId?: Core.TranscriptId) =>
       Effect.gen(function*() {
         if (shouldFail && (!failingOperation || failingOperation === "updateJobStatus")) {
           return yield* Effect.fail(
@@ -146,8 +146,8 @@ export const createMockJobStore = () => {
         capturedUpdates.push({
           jobId,
           newStatus: status,
-          error,
-          transcriptId,
+          error: error ?? "",
+          transcriptId: transcriptId ?? "" as Core.TranscriptId,
           timestamp: new Date()
         })
 
@@ -162,7 +162,7 @@ export const createMockJobStore = () => {
           )
         }
 
-        const updatedJob: TranscriptionJob = {
+        const updatedJob: Jobs.TranscriptionJob = {
           ...existingJob,
           status,
           updatedAt: new Date(Date.now() + 1), // Ensure updatedAt is newer
@@ -213,7 +213,7 @@ export const createFailingJobStoreMock = () => {
   const failingImplementation: ProcessingJobStoreInterface = {
     ...baseMock.mockImplementation,
 
-    createJob: (_job: TranscriptionJob) =>
+    createJob: (_job: Jobs.TranscriptionJob) =>
       Effect.fail(
         new RepositoryError({
           message: "Mock database error during job creation",
@@ -221,7 +221,7 @@ export const createFailingJobStoreMock = () => {
         })
       ),
 
-    findJobById: (_jobId: JobId) =>
+    findJobById: (_jobId: Core.JobId) =>
       Effect.fail(
         new RepositoryError({
           message: "Mock database error during job lookup",
@@ -237,7 +237,7 @@ export const createFailingJobStoreMock = () => {
         })
       ),
 
-    updateJobStatus: (_jobId: JobId, _status: JobStatus) =>
+    updateJobStatus: (_jobId: Core.JobId, _status: Jobs.JobStatus) =>
       Effect.fail(
         new RepositoryError({
           message: "Mock database error during status update",

@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import { LanguageCode } from "../core/types.js"
 import { SpeakerRole } from "../media/speakers.js"
 
 /**
@@ -33,12 +32,7 @@ export const TranscriptionContext = Schema.Struct({
   contentHints: Schema.optional(Schema.Struct({
     domain: Schema.Array(Schema.String),
     tags: Schema.Array(Schema.String),
-    summary: Schema.optional(Schema.String)
-  })),
-
-  // Processing preferences
-  preferences: Schema.optional(Schema.Struct({
-    language: Schema.optional(LanguageCode),
+    summary: Schema.optional(Schema.String),
     format: Schema.optional(MediaFormat)
   }))
 })

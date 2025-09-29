@@ -289,7 +289,7 @@ export const triggerNotifications = new gcp.eventarc.Trigger("trigger-notificati
     cloudRunService: {
       service: apiService.name,
       region: configuration.region,
-      path: "/_internal/notifications",
+      path: "/internal/notifications",
     },
   },
   transport: {

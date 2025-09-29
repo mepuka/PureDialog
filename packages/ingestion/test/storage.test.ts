@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Effect, Layer, Option, Schema } from "effect"
-import { CloudStorageConfig, CloudStorageService } from "../src/storage/index.js"
+import { CloudStorageConfig } from "../src/Config.js"
+import { Layer as IngestionLayer } from "../src/index.js"
 
 // Mock CloudStorageConfig for testing
 const TestCloudStorageConfig = Layer.sync(CloudStorageConfig, () => ({
@@ -15,7 +16,7 @@ const TestCloudStorageConfig = Layer.sync(CloudStorageConfig, () => ({
 }))
 
 // Mock CloudStorageService for testing
-const TestCloudStorageService = Layer.sync(CloudStorageService, () => ({
+const TestCloudStorageService = Layer.sync(IngestionLayer.CloudStorageService, () => ({
   putObject: (bucket, key, _data) =>
     Effect.gen(function*() {
       yield* Effect.logInfo(`Mock putObject: ${bucket}/${key}`)
@@ -31,7 +32,7 @@ const TestCloudStorageService = Layer.sync(CloudStorageService, () => ({
 
   deleteObject: (bucket, key) =>
     Effect.gen(function*() {
-      yield* Effect.logInfo(`Mock deleteObject: ${bucket}/${key}`)
+      return yield* Effect.logInfo(`Mock deleteObject: ${bucket}/${key}`)
     }),
 
   listObjects: (bucket, prefix) =>
@@ -55,7 +56,7 @@ const TestEnvironment = Layer.mergeAll(
 describe("CloudStorageService", () => {
   it.effect("should provide basic operations", () =>
     Effect.gen(function*() {
-      const storage = yield* CloudStorageService
+      const storage = yield* IngestionLayer.CloudStorageService
 
       // Test putObject
       yield* storage.putObject("test-bucket", "test-key", { test: "data" })

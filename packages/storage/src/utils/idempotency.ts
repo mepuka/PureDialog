@@ -1,4 +1,4 @@
-import type { MediaResource } from "@puredialog/domain"
+import type { Media } from "@puredialog/domain"
 import { Data, Effect, Hash } from "effect"
 
 /**
@@ -20,7 +20,7 @@ export class IdempotencyKey extends Data.TaggedClass("IdempotencyKey")<{
 /**
  * Generate deterministic hash of media resource for uniqueness using Effect Hash
  */
-export const generateMediaHash = (media: MediaResource): string => {
+export const generateMediaHash = (media: Media.MediaResource): string => {
   // Extract media URL for hashing
   const mediaUrl = extractMediaUrl(media)
 
@@ -36,7 +36,7 @@ export const generateMediaHash = (media: MediaResource): string => {
  */
 export const generateIdempotencyKey = (
   endpoint: string,
-  media: MediaResource
+  media: Media.MediaResource
 ): IdempotencyKey => {
   // Validate user key format
   const userKey = generateRequestId() // random uuidk
@@ -55,7 +55,7 @@ export const generateIdempotencyKey = (
 /**
  * Extract media URL for idempotency mapping using Effect Data
  */
-export const extractMediaUrl = (media: MediaResource): string => {
+export const extractMediaUrl = (media: Media.MediaResource): string => {
   if (media.type === "youtube") {
     return `https://www.youtube.com/watch?v=${media.data.id}`
   }

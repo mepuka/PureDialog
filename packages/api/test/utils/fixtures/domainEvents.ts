@@ -7,8 +7,7 @@ import type {
   PubSubMessage,
   RequestId,
   TranscriptComplete,
-  TranscriptId,
-  WorkMessage
+  TranscriptId
 } from "@puredialog/domain"
 import { createTestJob } from "./jobs.js"
 
@@ -38,7 +37,7 @@ export const createTranscriptCompleteEvent = (overrides: Partial<TranscriptCompl
   jobId: "job_test_12345" as JobId,
   requestId: "req_test_67890" as RequestId,
   transcript: {
-    id: "transcript_test_abc" as TranscriptId,
+    id: "trn_test_abc123" as TranscriptId,
     content: "Test transcript content",
     language: "en",
     confidence: 0.95,
@@ -56,13 +55,6 @@ export const createJobStatusChangedEvent = (overrides: Partial<JobStatusChanged>
   requestId: "req_test_67890" as RequestId,
   from: "Queued",
   to: "Processing",
-  occurredAt: new Date(),
-  ...overrides
-})
-
-export const createWorkMessageEvent = (overrides: Partial<WorkMessage> = {}): WorkMessage => ({
-  _tag: "WorkMessage",
-  job: createTestJob(),
   occurredAt: new Date(),
   ...overrides
 })
@@ -102,7 +94,6 @@ export const createInvalidPubSubMessage = (): PubSubMessage => ({
 function getEventJobId(event: DomainEvent): string {
   switch (event._tag) {
     case "JobQueued":
-    case "WorkMessage":
       return event.job.id
     case "JobFailed":
     case "TranscriptComplete":
@@ -119,7 +110,6 @@ function getEventJobId(event: DomainEvent): string {
 function getEventRequestId(event: DomainEvent): string {
   switch (event._tag) {
     case "JobQueued":
-    case "WorkMessage":
       return event.job.requestId
     case "JobFailed":
     case "TranscriptComplete":

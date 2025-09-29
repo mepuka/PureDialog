@@ -1,10 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["src"],
   "compilerOptions": {
+    "rootDir": "src",
     "types": ["node"],
-    "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
-    "rootDir": "src"
+    "composite": true,
+    "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "references": [
+  ]
 }

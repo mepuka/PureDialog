@@ -11,10 +11,10 @@
     }
   },
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/index.js",
-    "clean": "tsc -b tsconfig.json --clean",
+    "clean": "tsc -b tsconfig.build.json --clean",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "vitest"
@@ -32,7 +32,7 @@
     "effect": "^3.17.14"
   },
   "devDependencies": {
-    "typescript": "~5.8.2",
+    "typescript": "~5.8.3",
     "eslint": "^9.34.0",
     "@types/node": "^22.14.0",
     "@effect/vitest": "^0.24.1",

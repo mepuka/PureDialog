@@ -1,25 +1,25 @@
-import { HttpApiBuilder, HttpServer } from "@effect/platform"
+import { HttpApiBuilder, HttpApiSwagger, HttpServer } from "@effect/platform"
 import { NodeHttpServer } from "@effect/platform-node"
-import { StoreLayer } from "@puredialog/storage"
+import { JobStoreLayerLive } from "@puredialog/storage"
 import { Layer } from "effect"
 import { createServer } from "node:http"
-import { PureDialogApi } from "./api.js"
-import { ApiConfigLive } from "./config.js"
-import { healthLive } from "./handlers/health.js"
-import { internalLayer } from "./handlers/internal.js"
-import { jobsApiLayer } from "./handlers/jobs.js"
+import { pureDialogApi } from "./http/api.js"
+import { healthRoutes } from "./routes/health.js"
+import { internalRoutes } from "./routes/internal.js"
+import { jobRoutes } from "./routes/jobs.js"
 
-const ApiLive = HttpApiBuilder.api(PureDialogApi)
+const RoutesLive = Layer.mergeAll(healthRoutes, jobRoutes, internalRoutes)
+
+const ApiLive = HttpApiBuilder.api(pureDialogApi).pipe(Layer.provide(RoutesLive))
 
 const ServerLive = HttpApiBuilder.serve().pipe(
+  Layer.provide(HttpApiSwagger.layer({ path: "/docs" })),
   Layer.provide(ApiLive),
-  Layer.provide(ApiConfigLive),
-  Layer.provide(healthLive),
-  Layer.provide(jobsApiLayer),
-  Layer.provide(internalLayer),
-  Layer.provide(StoreLayer),
+  Layer.provide(JobStoreLayerLive),
   HttpServer.withLogAddress,
   Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 }))
 )
 
 export const main = Layer.launch(ServerLive)
+
+export default main

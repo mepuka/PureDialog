@@ -17,7 +17,8 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "tsc -b tsconfig.build.json --clean",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
@@ -25,7 +26,10 @@
     "@effect/platform": "latest",
     "@effect/sql": "latest",
     "effect": "latest",
-    "@puredialog/domain": "workspace:^"
+    "@puredialog/domain": "workspace:^",
+    "@puredialog/ingestion": "workspace:^",
+    "@puredialog/storage": "workspace:^",
+    "@puredialog/llm": "workspace:^"
   },
   "devDependencies": {},
   "effect": {

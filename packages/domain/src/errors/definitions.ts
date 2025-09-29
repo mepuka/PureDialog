@@ -1,5 +1,5 @@
 import { Data, Schema } from "effect"
-import type { JobId, RequestId } from "../schemas/ids.js"
+import type { JobId, RequestId } from "../core/ids.js"
 
 // --- Base Error Categories ---
 

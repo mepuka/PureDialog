@@ -1,20 +1,24 @@
-// Core domain exports - tree-shakeable
-export * from "./errors/index.js"
-export * from "./schemas/index.js"
-export * from "./shared/index.js"
+/**
+ * PureDialog Domain Package
+ *
+ * Clean, organized domain types with namespaces to avoid circular dependencies
+ * and provide clear separation of concerns.
+ */
 
-// Commonly used YouTube utilities (tree-shakeable)
-export {
-  CHANNEL_URL_PATTERN,
-  extractChannelId,
-  // Most commonly used extractors
-  extractVideoId,
-  isValidYoutubeChannelUrl,
-  // Most commonly used predicates
-  isValidYoutubeUrl,
-  // Most commonly used patterns
-  WATCH_URL_PATTERN
-} from "./schemas/youtube.js"
+// Core domain types - fundamental building blocks
+export * as Core from "./core/index.js"
 
-// Note: For full YouTube API, import from "@puredialog/domain/youtube"
-// This keeps the main export surface minimal and tree-shakeable
+// Media-related types - resources, metadata, speakers
+export * as Media from "./media/index.js"
+
+// Transcription-related types - transcripts, context, inference
+export * as Transcription from "./transcription/index.js"
+
+// Job processing types - status, entities, requests, responses
+export * as Jobs from "./jobs/index.js"
+
+// YouTube-specific types and utilities
+export * as YouTube from "./youtube/index.js"
+
+// Error types and schemas
+export * as Errors from "./errors/index.js"

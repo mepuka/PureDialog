@@ -1,4 +1,4 @@
-import type { DomainEvent, PubSubMessage, TranscriptionJob } from "@puredialog/domain"
+import type { DomainEvent, PubSubMessage } from "@puredialog/domain"
 import type { MessageEncodingError } from "@puredialog/ingestion"
 import { MessageAdapter } from "@puredialog/ingestion"
 import { Effect, Layer } from "effect"
@@ -9,8 +9,8 @@ import { Effect, Layer } from "effect"
  */
 
 export interface MessageCapture {
-  readonly operation: "encodeDomainEvent" | "encodeWorkMessage" | "decodeDomainEvent" | "decodeWorkMessage"
-  readonly input: DomainEvent | TranscriptionJob | PubSubMessage
+  readonly operation: "encodeDomainEvent" | "decodeDomainEvent"
+  readonly input: DomainEvent | PubSubMessage
   readonly timestamp: Date
 }
 
@@ -60,34 +60,6 @@ export const createMockMessageAdapter = () => {
         return mockMessage
       }),
 
-    encodeWorkMessage: (job: TranscriptionJob) =>
-      Effect.gen(function*() {
-        if (shouldFail && (!failingOperation || failingOperation === "encodeWorkMessage")) {
-          return yield* Effect.fail(
-            new Error("Mock failure for encodeWorkMessage") as MessageEncodingError
-          )
-        }
-
-        capturedMessages.push({
-          operation: "encodeWorkMessage",
-          input: job,
-          timestamp: new Date()
-        })
-
-        const mockMessage: PubSubMessage = {
-          data: Buffer.from(JSON.stringify(job)),
-          attributes: {
-            jobId: job.id,
-            requestId: job.requestId,
-            eventType: "WorkMessage",
-            contentType: "application/json",
-            timestamp: new Date().toISOString()
-          }
-        }
-
-        return mockMessage
-      }),
-
     decodeDomainEvent: (message: PubSubMessage) =>
       Effect.gen(function*() {
         if (shouldFail && (!failingOperation || failingOperation === "decodeDomainEvent")) {
@@ -111,27 +83,6 @@ export const createMockMessageAdapter = () => {
         return yield* Effect.tryPromise({
           try: () => Promise.resolve(JSON.parse(message.data.toString()) as DomainEvent),
           catch: () => new Error("Failed to parse domain event from message") as MessageEncodingError
-        })
-      }),
-
-    decodeWorkMessage: (message: PubSubMessage) =>
-      Effect.gen(function*() {
-        if (shouldFail && (!failingOperation || failingOperation === "decodeWorkMessage")) {
-          return yield* Effect.fail(
-            new Error("Mock failure for decodeWorkMessage") as MessageEncodingError
-          )
-        }
-
-        capturedMessages.push({
-          operation: "decodeWorkMessage",
-          input: message,
-          timestamp: new Date()
-        })
-
-        // Parse job from message data using Effect
-        return yield* Effect.tryPromise({
-          try: () => Promise.resolve(JSON.parse(message.data.toString()) as TranscriptionJob),
-          catch: () => new Error("Failed to parse work message from message") as MessageEncodingError
         })
       })
   }
@@ -165,13 +116,7 @@ export const createFailingMessageAdapterMock = () => {
   const failingImplementation = {
     encodeDomainEvent: (_event: DomainEvent) => Effect.fail(new Error("Mock encoding failure") as MessageEncodingError),
 
-    encodeWorkMessage: (_job: TranscriptionJob) =>
-      Effect.fail(new Error("Mock encoding failure") as MessageEncodingError),
-
     decodeDomainEvent: (_message: PubSubMessage) =>
-      Effect.fail(new Error("Mock decoding failure") as MessageEncodingError),
-
-    decodeWorkMessage: (_message: PubSubMessage) =>
       Effect.fail(new Error("Mock decoding failure") as MessageEncodingError)
   }
 

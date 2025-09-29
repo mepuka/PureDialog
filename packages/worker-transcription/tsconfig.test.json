@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "include": ["test"],
-  "references": [],
+  "references": [
+    { "path": "../domain" },
+    { "path": "../ingestion" },
+    { "path": "../storage" },
+    { "path": "../llm" }
+  ],
   "compilerOptions": {
     "types": ["node"],
     "tsBuildInfoFile": ".tsbuildinfo/test.tsbuildinfo",

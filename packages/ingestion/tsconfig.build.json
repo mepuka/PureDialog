@@ -4,11 +4,13 @@
     "types": ["node"],
     "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
     "outDir": "build/esm",
+    "noEmit": false,
+    "composite": true,
     "declarationDir": "build/dts",
     "stripInternal": true
   },
   "references": [
-    { "path": "../domain" }
+    { "path": "../domain/tsconfig.build.json" },
   ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]

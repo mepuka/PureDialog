@@ -1,3 +1,4 @@
+import { NodeRuntime } from "@effect/platform-node"
 import { main } from "./server.js"
 
-export { main }
+main.pipe(NodeRuntime.runMain)

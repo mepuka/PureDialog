@@ -1,5 +1,6 @@
-import type { DialogueTurn, MediaMetadata, YouTubeVideo } from "@puredialog/domain"
 import { Chunk, Console, Context, Effect, Layer, Option, Stream } from "effect"
+
+import type { Media, Transcription, YouTube } from "@puredialog/domain"
 import { LLMAdapter, LLMAdapterLive } from "./adapters.js"
 import { GeminiClient, GeminiClientLive } from "./client.js"
 import type { LLMError } from "./errors.js"
@@ -9,9 +10,9 @@ export class LLMService extends Context.Tag("@puredialog/llm/LLMService")<
   LLMService,
   {
     readonly transcribeMedia: (
-      video: YouTubeVideo,
-      metadata: MediaMetadata
-    ) => Effect.Effect<ReadonlyArray<DialogueTurn>, LLMError>
+      video: YouTube.YouTubeVideo,
+      metadata: Media.MediaMetadata
+    ) => Effect.Effect<ReadonlyArray<Transcription.DialogueTurn>, LLMError>
   }
 >() {}
 
@@ -21,8 +22,8 @@ const makeLLMService = Effect.gen(function*() {
   const adapter = yield* LLMAdapter
 
   const transcribeMedia = (
-    video: YouTubeVideo,
-    metadata: MediaMetadata
+    video: YouTube.YouTubeVideo,
+    metadata: Media.MediaMetadata
   ) =>
     Effect.gen(function*() {
       const rawOutputStream = (yield* client.transcribeYoutubeVideo({

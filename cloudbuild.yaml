@@ -7,7 +7,7 @@ steps:
     args:
       - build
       - "-f"
-      - services/api/Dockerfile
+      - packages/api/Dockerfile
       - "-t"
       - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:$COMMIT_SHA"
       - "."
@@ -19,9 +19,20 @@ steps:
 
   - name: gcr.io/cloud-builders/docker
     args:
+      - tag
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:$COMMIT_SHA"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:latest"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:latest"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
       - build
       - "-f"
-      - services/worker-metadata/Dockerfile
+      - packages/worker-metadata/Dockerfile
       - "-t"
       - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-metadata:$COMMIT_SHA"
       - "."
@@ -33,9 +44,20 @@ steps:
 
   - name: gcr.io/cloud-builders/docker
     args:
+      - tag
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-metadata:$COMMIT_SHA"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-metadata:latest"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-metadata:latest"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
       - build
       - "-f"
-      - services/worker-transcription/Dockerfile
+      - packages/worker-transcription/Dockerfile
       - "-t"
       - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-transcription:$COMMIT_SHA"
       - "."
@@ -44,6 +66,17 @@ steps:
     args:
       - push
       - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-transcription:$COMMIT_SHA"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - tag
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-transcription:$COMMIT_SHA"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-transcription:latest"
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/worker-transcription:latest"
 
 images:
   - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:$COMMIT_SHA"

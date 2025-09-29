@@ -1,11 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts"],
+  "include": ["src"],
   "compilerOptions": {
     "types": ["node"],
-    "outDir": "build/esm",
-    "declarationDir": "build/dts",
-    "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
-    "rootDir": "src"
-  }
+    "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../domain" },
+    { "path": "../ingestion" },
+    { "path": "../storage" },
+    { "path": "../llm" }
+  ]
 }

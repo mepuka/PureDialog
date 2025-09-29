@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest"
-import { generateJobId, generateRequestId } from "../../src/utils/job-creation.js"
+import { generateJobId, generateRequestId } from "../../src/services/job-creation.js"
 
 describe("Job Creation Logic", () => {
   describe("generateJobId", () => {

@@ -2,8 +2,6 @@
   "name": "@puredialog/ingestion",
   "version": "0.0.0",
   "type": "module",
-  "license": "MIT",
-  "description": "The ingestion for Pure Dialog",
   "exports": {
     ".": {
       "types": "./build/dts/index.d.ts",
@@ -11,9 +9,11 @@
       "default": "./build/esm/index.js"
     }
   },
+  "license": "MIT",
+  "description": "The ingestion for Pure Dialog",
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "tsc -b tsconfig.build.json --clean",
     "test": "vitest",
     "coverage": "vitest --coverage"
@@ -21,26 +21,9 @@
   "dependencies": {
     "@effect/platform": "latest",
     "@effect/platform-node": "latest",
-    "@google-cloud/pubsub": "latest",
     "@google-cloud/storage": "^7.7.0",
-    "@googleapis/youtube": "latest",
     "@puredialog/domain": "workspace:^",
     "effect": "latest",
     "typescript": "~5.8.3"
-  },
-  "effect": {
-    "generateExports": {
-      "include": [
-        "**/*.ts"
-      ]
-    },
-    "generateIndex": {
-      "include": [
-        "**/*.ts"
-      ]
-    }
-  },
-  "devDependencies": {
-    "@tim-smart/openapi-gen": "^0.4.13"
   }
 }

@@ -7,6 +7,8 @@
     { "path": "packages/llm/tsconfig.build.json" },
     { "path": "packages/api/tsconfig.build.json" },
     { "path": "packages/worker-metadata/tsconfig.build.json" },
-    { "path": "packages/worker-transcription/tsconfig.build.json" }
+    { "path": "packages/worker-transcription/tsconfig.build.json" },
+    { "path": "packages/infra/tsconfig.build.json" },
+    { "path": "packages/storage/tsconfig.build.json" }
   ]
 }

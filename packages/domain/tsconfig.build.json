@@ -4,10 +4,11 @@
     "types": ["node"],
     "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
     "outDir": "build/esm",
+    "composite": true,
+    "noEmit": false,
     "declarationDir": "build/dts",
     "stripInternal": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
-
+  "references": [
+  ]
 }

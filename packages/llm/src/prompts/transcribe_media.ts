@@ -1,14 +1,14 @@
-import type { MediaMetadata, Speaker } from "@puredialog/domain"
+import type { Media } from "@puredialog/domain"
 
 const systemInstruction =
   `You are a world-class transcription engine specializing in generating human-level, production-quality transcripts. Your primary goal is to produce accurate, perfectly formatted, and highly readable verbatim transcripts from audio-first media content (e.g., expert interviews, technical discussions, lectures, podcasts).`
 
-const hints = (metadata: MediaMetadata): string => {
+const hints = (metadata: Media.MediaMetadata): string => {
   const speakers = metadata.speakers
 
   // Build factual speaker details
   const speakerHints = speakers
-    .map((s: Speaker) => {
+    .map((s: Media.Speaker) => {
       const name = s.name ?? s.role
       const affiliation = s.affiliation
         ? `${s.affiliation.name}${s.affiliation.url ? ` (${s.affiliation.url})` : ""}`

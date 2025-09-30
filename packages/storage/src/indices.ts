@@ -1,4 +1,5 @@
-import type { Core, Jobs } from "@puredialog/domain"
+import type { Core } from "@puredialog/domain"
+import { Jobs } from "@puredialog/domain"
 import { Schema } from "effect"
 import {
   EventPathParser,
@@ -17,12 +18,31 @@ import {
 export const Index = {
   /**
    * Generates the full GCS path for a specific TranscriptionJob document.
+   * Automatically extracts status from job discriminated union.
    * Uses Schema.encodeSync for type-safe path generation.
+   * @param job The job instance (discriminated union).
+   * @returns The full GCS object key, e.g., `jobs/Queued/job_123.json`
+   */
+  job: (job: Jobs.TranscriptionJob): string => {
+    const status = Jobs.getJobStatus(job)
+    return Schema.encodeSync(JobPathParser)([
+      STORAGE_PATHS.JOBS_PREFIX,
+      "/",
+      status,
+      "/",
+      job.id,
+      ".json"
+    ])
+  },
+
+  /**
+   * Generates the full GCS path for a job with explicit status and ID.
+   * Use this when you don't have a job instance but know the status and ID.
    * @param status The status of the job, used for prefixing.
    * @param jobId The ID of the job.
    * @returns The full GCS object key, e.g., `jobs/Queued/job_123.json`
    */
-  job: (status: Jobs.JobStatus, jobId: Core.JobId): string =>
+  jobPath: (status: Jobs.JobStatus, jobId: Core.JobId): string =>
     Schema.encodeSync(JobPathParser)([
       STORAGE_PATHS.JOBS_PREFIX,
       "/",

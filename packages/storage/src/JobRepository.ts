@@ -7,39 +7,30 @@ import { hashIdempotencyKey, idempotencyKeyFromString } from "./utils/idempotenc
 // --- REPOSITORY INTERFACE ---
 export interface JobRepositoryInterface {
   readonly createJob: (
-    job: Jobs.TranscriptionJob
-  ) => Effect.Effect<
-    Jobs.TranscriptionJob,
-    RepositoryError
-  >
+    job: Jobs.QueuedJob
+  ) => Effect.Effect<Jobs.QueuedJob, RepositoryError>
 
   readonly findJobById: (
     jobId: Core.JobId
-  ) => Effect.Effect<
-    Option.Option<Jobs.TranscriptionJob>,
-    RepositoryError
-  >
+  ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
 
   readonly findJobByIdempotencyKey: (
     key: string
-  ) => Effect.Effect<
-    Option.Option<Jobs.TranscriptionJob>,
-    RepositoryError
-  >
+  ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
 
   readonly updateJobStatus: (
     jobId: Core.JobId,
     newStatus: Jobs.JobStatus,
     error?: string,
     transcriptId?: Core.TranscriptId
-  ) => Effect.Effect<
-    Jobs.TranscriptionJob,
-    RepositoryError
-  >
+  ) => Effect.Effect<Jobs.TranscriptionJob, RepositoryError>
 }
 
 // --- SERVICE TAG ---
-export class JobRepository extends Context.Tag("JobRepository")<JobRepository, JobRepositoryInterface>() {}
+export class JobRepository extends Context.Tag("JobRepository")<
+  JobRepository,
+  JobRepositoryInterface
+>() {}
 
 // --- ERROR TYPE ---
 export class RepositoryError extends Data.TaggedError("RepositoryError")<{
@@ -57,13 +48,11 @@ export const JobRepositoryLayer = EffectLayer.effect(
     const bucket = config.bucket
 
     const createJob = (
-      job: Jobs.TranscriptionJob
-    ): Effect.Effect<
-      Jobs.TranscriptionJob,
-      RepositoryError
-    > =>
+      job: Jobs.QueuedJob
+    ): Effect.Effect<Jobs.QueuedJob, RepositoryError> =>
       Effect.gen(function*() {
-        const path = Index.job(job.status, job.id)
+        const status = Jobs.getJobStatus(job)
+        const path = Index.jobPath(status, job.id)
         yield* storage.putObject(bucket, path, job)
 
         if (job.idempotencyKey) {
@@ -101,20 +90,26 @@ export const JobRepositoryLayer = EffectLayer.effect(
 
     const findJobById = (
       jobId: Core.JobId
-    ): Effect.Effect<
-      Option.Option<Jobs.TranscriptionJob>,
-      RepositoryError
-    > => {
-      const statuses: Array<Jobs.JobStatus> = ["Queued", "Processing", "Completed", "Failed"]
+    ): Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError> => {
+      const statuses: Array<Jobs.JobStatus> = [
+        "Queued",
+        "MetadataReady",
+        "Processing",
+        "Completed",
+        "Failed",
+        "Cancelled"
+      ]
 
       const checkStatus = (status: Jobs.JobStatus) =>
         storage
-          .getObject(bucket, Index.job(status, jobId), Jobs.TranscriptionJob)
+          .getObject(bucket, Index.jobPath(status, jobId), Jobs.TranscriptionJob)
           .pipe(Effect.catchAll(() => Effect.succeed(Option.none())))
 
       // Check each status prefix until the job is found
       return Effect.forEach(statuses, checkStatus, { concurrency: "unbounded" }).pipe(
-        Effect.map((results) => Option.firstSomeOf(results as Iterable<Option.Option<Jobs.TranscriptionJob>>)),
+        Effect.map(
+          (results) => Option.firstSomeOf(results as Iterable<Option.Option<Jobs.TranscriptionJob>>)
+        ),
         Effect.mapError(
           (cause) =>
             new RepositoryError({
@@ -128,11 +123,7 @@ export const JobRepositoryLayer = EffectLayer.effect(
 
     const findJobByIdempotencyKey = (
       keyString: string
-    ): Effect.Effect<
-      Option.Option<Jobs.TranscriptionJob>,
-      RepositoryError,
-      never
-    > =>
+    ): Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError, never> =>
       Effect.gen(function*() {
         const idempotencyKey = idempotencyKeyFromString(keyString)
         const hashedKey = yield* hashIdempotencyKey(idempotencyKey)
@@ -166,10 +157,7 @@ export const JobRepositoryLayer = EffectLayer.effect(
       newStatus: Jobs.JobStatus,
       error?: string,
       transcriptId?: Core.TranscriptId
-    ): Effect.Effect<
-      Jobs.TranscriptionJob,
-      RepositoryError
-    > =>
+    ): Effect.Effect<Jobs.TranscriptionJob, RepositoryError> =>
       Effect.gen(function*() {
         const maybeJob = yield* findJobById(jobId)
         if (Option.isNone(maybeJob)) {
@@ -181,16 +169,47 @@ export const JobRepositoryLayer = EffectLayer.effect(
           )
         }
         const oldJob = maybeJob.value
-        const oldPath = Index.job(oldJob.status, jobId)
+        const oldStatus = Jobs.getJobStatus(oldJob)
+        const oldPath = Index.jobPath(oldStatus, jobId)
 
-        const newJob = Jobs.TranscriptionJob.make({
-          ...oldJob,
-          status: newStatus,
-          updatedAt: new Date(),
-          ...(error !== undefined && { error }),
-          ...(transcriptId !== undefined && { transcriptId })
-        })
-        const newPath = Index.job(newStatus, jobId)
+        // Create new job state based on transition
+        let newJob: Jobs.TranscriptionJob
+
+        if (newStatus === "Failed") {
+          // Fail transition
+          if (!Jobs.isActiveJob(oldJob)) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                operation: "updateStatus",
+                message: `Cannot fail terminal job: ${jobId}`
+              })
+            )
+          }
+          newJob = Jobs.JobTransitions.fail(oldJob, error || "Unknown error")
+        } else if (newStatus === "Cancelled") {
+          // Cancel transition
+          if (!Jobs.isActiveJob(oldJob)) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                operation: "updateStatus",
+                message: `Cannot cancel terminal job: ${jobId}`
+              })
+            )
+          }
+          newJob = Jobs.JobTransitions.cancel(oldJob, error || "Cancelled by user")
+        } else {
+          // Regular state progression - just update timestamps
+          // This is a temporary bridge for backward compatibility
+          // Workers should use type-safe transitions directly
+          newJob = {
+            ...oldJob,
+            _tag: newStatus === "Completed" ? "CompletedJob" : oldJob._tag,
+            updatedAt: new Date(),
+            ...(transcriptId && { transcriptId })
+          } as Jobs.TranscriptionJob
+        }
+
+        const newPath = Index.jobPath(newStatus, jobId)
 
         // Write-then-delete pattern for atomic status change
         yield* storage.putObject(bucket, newPath, newJob)
@@ -201,8 +220,8 @@ export const JobRepositoryLayer = EffectLayer.effect(
         const eventPath = Index.event(jobId, eventId)
         const domainEvent = Jobs.JobStatusChanged.make({
           jobId,
-          requestId: newJob.requestId,
-          from: oldJob.status,
+          requestId: oldJob.requestId,
+          from: oldStatus,
           to: newStatus,
           occurredAt: new Date()
         })
@@ -210,7 +229,7 @@ export const JobRepositoryLayer = EffectLayer.effect(
 
         yield* Effect.logInfo("Job status updated with domain event", {
           jobId,
-          from: oldJob.status,
+          from: oldStatus,
           to: newStatus,
           eventPath
         })

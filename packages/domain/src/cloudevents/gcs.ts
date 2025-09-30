@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import { CloudEvent } from "./cloudevents.js"
 
 /**
  * Describes the customer-specified mechanism used to store the data at rest.
@@ -50,15 +49,26 @@ export type GcsObjectMetadata = Schema.Schema.Type<typeof GcsObjectMetadata>
 
 /**
  * The CloudEvent for a GCS object finalized event.
+ * GCS always provides a subject, so we make it required.
  */
-export const GcsObjectFinalizedEvent = CloudEvent(GcsObjectMetadata).pipe(
-  Schema.extend(
-    Schema.Struct({
-      type: Schema.Literal("google.cloud.storage.object.v1.finalized"),
-      subject: Schema.String
-    })
-  )
-)
+export const GcsObjectFinalizedEvent = Schema.Struct({
+  // Required CloudEvents fields
+  id: Schema.String.pipe(Schema.brand("CloudEventId")),
+  source: Schema.String,
+  specversion: Schema.Literal("1.0"),
+  type: Schema.Literal("google.cloud.storage.object.v1.finalized"),
+
+  // Required for GCS events
+  subject: Schema.String,
+
+  // Optional CloudEvents fields
+  datacontenttype: Schema.optional(Schema.String),
+  dataschema: Schema.optional(Schema.String),
+  time: Schema.optional(Schema.DateFromString),
+
+  // GCS object metadata
+  data: GcsObjectMetadata
+})
 
 export type GcsObjectFinalizedEvent = Schema.Schema.Type<
   typeof GcsObjectFinalizedEvent

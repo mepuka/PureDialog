@@ -3,62 +3,29 @@ import { ParseResult, Schema } from "effect"
 import { GcsPathParser } from "./paths.js"
 
 /**
- * A schema that parses the GCS object path from a CloudEvent subject.
- * It filters for paths that are recognized as 'job' paths and extracts the job components.
- * This is a one-way transformation (decode only).
+ * Parse job info from a GCS CloudEvent subject field.
+ * Extracts the job status and ID from paths like "objects/jobs/Queued/job_123.json"
  */
-const JobInfoFromSubject = Schema.String.pipe(
-  Schema.transformOrFail(
-    Schema.Struct({
-      status: Jobs.JobStatus,
-      jobId: Core.JobId
-    }),
-    {
-      decode: (subject, _, ast) => {
-        const path = subject.startsWith("objects/")
-          ? subject.slice("objects/".length)
-          : subject
+const parseJobFromSubject = (subject: string) => {
+  const path = subject.startsWith("objects/")
+    ? subject.slice("objects/".length)
+    : subject
 
-        const result = Schema.decodeUnknownSync(GcsPathParser)(path)
+  const result = Schema.decodeUnknownSync(GcsPathParser)(path)
 
-        if (result.type !== "job") {
-          return ParseResult.fail(
-            new ParseResult.Unexpected(ast, `Expected a job path, but got ${result.type}`)
-          )
-        }
+  if (result.type !== "job") {
+    throw new Error(`Expected a job path, but got ${result.type}`)
+  }
 
-        return ParseResult.succeed({
-          status: result.status as Jobs.JobStatus,
-          jobId: result.jobId as Core.JobId
-        })
-      },
-      encode: (_, __, ast) =>
-        ParseResult.fail(
-          new ParseResult.Forbidden(
-            ast,
-            "Encoding from JobInfo to a subject string is not supported."
-          )
-        )
-    }
-  )
-)
+  return {
+    status: result.status as Jobs.JobStatus,
+    jobId: result.jobId as Core.JobId
+  }
+}
 
 /**
- * A schema representing a valid GCS object finalization event for a transcription job.
- * It ensures the event type is correct and that the subject contains a valid job path.
- * The result of parsing is a clean object with the essential job info.
+ * The clean, domain-focused result of parsing a GCS job event.
  */
-
-// The 'From' schema represents the raw incoming CloudEvent with a valid job subject.
-const FromGcsJobFinalizedEvent = CloudEvents.Gcs.GcsObjectFinalizedEvent.pipe(
-  Schema.extend(
-    Schema.Struct({
-      subject: JobInfoFromSubject
-    })
-  )
-)
-
-// The 'To' schema represents our desired, clean, domain-focused object.
 const ToGcsJobFinalizedEvent = Schema.Struct({
   jobId: Core.JobId,
   status: Jobs.JobStatus,
@@ -67,21 +34,37 @@ const ToGcsJobFinalizedEvent = Schema.Struct({
   gcsObject: CloudEvents.Gcs.GcsObjectMetadata
 })
 
-// The final schema transforms the raw event into the clean domain object.
-// This is a one-way transformation (decode only).
+/**
+ * Transform a GCS CloudEvent into a clean domain object with parsed job info.
+ * This is a one-way transformation (decode only).
+ */
 export const GcsJobFinalizedEvent = Schema.transformOrFail(
-  FromGcsJobFinalizedEvent,
+  CloudEvents.Gcs.GcsObjectFinalizedEvent,
   ToGcsJobFinalizedEvent,
   {
     strict: true,
-    decode: ({ data, id, subject, time }) =>
-      ParseResult.encodeUnknown(ToGcsJobFinalizedEvent)({
-        jobId: subject.jobId,
-        status: subject.status,
-        eventId: id,
-        eventTime: time ?? new Date(), // Provide a default if time is missing
-        gcsObject: data
-      }),
+    decode: (cloudEvent, options, ast) => {
+      try {
+        // Parse the job info from the subject
+        const { jobId, status } = parseJobFromSubject(cloudEvent.subject)
+
+        // Encode the result using the target schema
+        return ParseResult.encodeUnknown(ToGcsJobFinalizedEvent)(
+          {
+            jobId,
+            status,
+            eventId: cloudEvent.id,
+            eventTime: cloudEvent.time ?? new Date(),
+            gcsObject: cloudEvent.data
+          },
+          options
+        )
+      } catch (error) {
+        return ParseResult.fail(
+          new ParseResult.Type(ast, cloudEvent, String(error))
+        )
+      }
+    },
     encode: (_, __, ast) =>
       ParseResult.fail(
         new ParseResult.Forbidden(

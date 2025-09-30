@@ -1,6 +1,6 @@
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup } from "@effect/platform"
-
-import { CreateJobRequest, HealthStatus, InternalUpdateResponse, JobAccepted, PubSubPushMessage } from "./schemas.js"
+import { CloudEvents } from "@puredialog/domain"
+import { CreateJobRequest, HealthStatus, InternalNotificationResponse, JobAccepted } from "./schemas.js"
 
 const Health = HttpApiGroup.make("health").add(
   HttpApiEndpoint.get("status", "/health").addSuccess(HealthStatus).addError(HttpApiError.HttpApiDecodeError)
@@ -16,8 +16,8 @@ const Jobs = HttpApiGroup.make("jobs").add(createJob)
 
 const Internal = HttpApiGroup.make("internal").add(
   HttpApiEndpoint.post("notifications", "/internal/notifications")
-    .setPayload(PubSubPushMessage)
-    .addSuccess(InternalUpdateResponse)
+    .setPayload(CloudEvents.Gcs.GcsObjectFinalizedEvent)
+    .addSuccess(InternalNotificationResponse)
     .addError(HttpApiError.HttpApiDecodeError)
 )
 

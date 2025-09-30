@@ -1,16 +1,18 @@
-import { Media, Transcription } from "@puredialog/domain"
+import { Core, Media, Transcription } from "@puredialog/domain"
 import { Schema } from "effect"
-import { JobId, RequestId } from "../../../domain/src/core/index.js"
 
+/**
+ * Health check response
+ */
 export const HealthStatus = Schema.Struct({
   status: Schema.Literal("Ok")
-  // services: Schema.Struct({
-  //   pubsub: Schema.Literal("connected", "disconnected"),
-  //   storage: Schema.Literal("connected", "disconnected")
-  // })
 })
 export type HealthStatus = Schema.Schema.Type<typeof HealthStatus>
 
+/**
+ * Request schema for creating a new transcription job.
+ * This is the only non-Google event derived type in the API.
+ */
 export const CreateJobRequest = Schema.Struct({
   media: Media.MediaResource,
   idempotencyKey: Schema.optional(Schema.String),
@@ -18,26 +20,22 @@ export const CreateJobRequest = Schema.Struct({
 })
 export type CreateJobRequest = Schema.Schema.Type<typeof CreateJobRequest>
 
+/**
+ * Response schema for a successfully accepted job (202).
+ */
 export const JobAccepted = Schema.Struct({
-  jobId: JobId,
-  requestId: RequestId
+  jobId: Core.JobId,
+  requestId: Core.RequestId
 })
 export type JobAccepted = Schema.Schema.Type<typeof JobAccepted>
 
-export const PubSubPushMessage = Schema.Struct({
-  message: Schema.Struct({
-    data: Schema.String,
-    messageId: Schema.String,
-    publishTime: Schema.DateFromString,
-    attributes: Schema.Record({ key: Schema.String, value: Schema.String })
-  }),
-  subscription: Schema.String
-})
-export type PubSubPushMessage = Schema.Schema.Type<typeof PubSubPushMessage>
-
-export const InternalUpdateResponse = Schema.Struct({
+/**
+ * Response for internal event notifications.
+ * Used by Eventarc to track event processing.
+ */
+export const InternalNotificationResponse = Schema.Struct({
   received: Schema.Boolean,
   processed: Schema.Boolean,
   reason: Schema.optional(Schema.String)
 })
-export type InternalUpdateResponse = Schema.Schema.Type<typeof InternalUpdateResponse>
+export type InternalNotificationResponse = Schema.Schema.Type<typeof InternalNotificationResponse>

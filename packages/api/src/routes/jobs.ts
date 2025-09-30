@@ -34,8 +34,7 @@ const createJobHandler = (payload: CreateJobRequest) =>
     const persisted = yield* store.createJob(job)
 
     yield* Effect.logInfo("Job persisted to queued state", {
-      jobId: persisted.id,
-      status: persisted.status
+      jobId: persisted.id
     })
 
     return JobAccepted.make({

@@ -11,6 +11,21 @@ export const TranscribeYoutubeVideoOptions = Schema.Struct({
   mediaMetadata: Media.MediaMetadata
 })
 
+/**
+ * Result from transcription with timing and token metadata.
+ */
+export interface TranscriptionResult {
+  readonly stream: Stream.Stream<Option.Option<string>, GoogleApiError, never>
+  readonly promptArtifact: typeof PromptArtifact.Type
+}
+
+const PromptArtifact = Schema.Struct(
+  {
+    systemInstruction: Schema.String,
+    fullPromptText: Schema.String
+  }
+)
+
 // Helper function to format content parts for the LLM call
 const _formatContentParts = (options: TranscribeYoutubeVideoOptions) => {
   const parts: Array<{ fileData: { fileUri: string } } | { text: string }> = [
@@ -36,7 +51,7 @@ export class GeminiClient extends Context.Tag("GeminiClient")<
   {
     readonly transcribeYoutubeVideo: (
       options: TranscribeYoutubeVideoOptions
-    ) => Effect.Effect<Stream.Stream<Option.Option<string>, GoogleApiError, never>, GoogleApiError>
+    ) => Effect.Effect<TranscriptionResult, GoogleApiError>
   }
 >() {}
 
@@ -48,41 +63,50 @@ export const GeminiClientLive = Layer.effect(
     const genAI = yield* Effect.try(() => new GoogleGenAI({ apiKey: Redacted.value(config.apiKey) }))
 
     const transcribeYoutubeVideo = (options: TranscribeYoutubeVideoOptions) =>
-      Effect.tryPromise({
-        try: () =>
-          genAI.models.generateContentStream({
-            model: config.model,
-            contents: _formatContentParts(options),
-            config: {
-              responseMimeType: "application/json",
-              mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
-              temperature: config.temperature,
-              systemInstruction
-            }
-          }),
-        catch: (cause) =>
-          cause instanceof ApiError ?
-            new GoogleApiError({
-              message: cause.message,
-              status: cause.status
-            })
-            : new GoogleApiError({
-              message: "Error generating content from Gemini API",
-              status: 500
-            })
-      }).pipe(
-        Effect.map((response) =>
-          Stream.fromAsyncIterable(response, (e) =>
-            new GoogleApiError({
-              message: "Error generating content from Gemini API",
-              cause: e,
-              status: 500
-            })).pipe(
-              Stream.map((res) => Option.fromNullable(res.text)),
-              Stream.withSpan("GeminiClient.transcribeYoutubeVideo")
-            )
-        )
-      )
+      Effect.gen(function*() {
+        const fullPromptData = {
+          model: config.model,
+          contents: _formatContentParts(options),
+          config: {
+            responseMimeType: "application/json",
+            mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
+            temperature: config.temperature,
+            systemInstruction
+          }
+        }
+
+        const response = yield* Effect.tryPromise({
+          try: () => genAI.models.generateContentStream(fullPromptData),
+          catch: (cause) =>
+            cause instanceof ApiError ?
+              new GoogleApiError({
+                message: cause.message,
+                status: cause.status
+              })
+              : new GoogleApiError({
+                message: "Error generating content from Gemini API",
+                status: 500
+              })
+        })
+
+        const stream = Stream.fromAsyncIterable(response, (e) =>
+          new GoogleApiError({
+            message: "Error generating content from Gemini API",
+            cause: e,
+            status: 500
+          })).pipe(
+            Stream.map((res) => Option.fromNullable(res.text)),
+            Stream.withSpan("GeminiClient.transcribeYoutubeVideo")
+          )
+
+        return {
+          stream,
+          promptArtifact: PromptArtifact.make({
+            systemInstruction: fullPromptData.config.systemInstruction,
+            fullPromptText: JSON.stringify(fullPromptData, null, 2)
+          })
+        }
+      })
 
     return {
       transcribeYoutubeVideo

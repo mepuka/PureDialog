@@ -1,7 +1,8 @@
-import type { Core } from "@puredialog/domain"
+import type { Core, LLM } from "@puredialog/domain"
 import { Jobs } from "@puredialog/domain"
 import { Schema } from "effect"
 import {
+  ArtifactPathParser,
   EventPathParser,
   IdempotencyPathParser,
   JobPathParser,
@@ -125,6 +126,35 @@ export const Index = {
    * Returns the prefix for listing all event logs across all jobs.
    */
   allEvents: (): string => `${STORAGE_PATHS.EVENTS_PREFIX}/`,
+
+  /**
+   * Generates the full GCS path for an LLM artifact.
+   * Uses Schema.encodeSync for type-safe path generation.
+   * @param jobId The ID of the job the artifact belongs to.
+   * @param artifactId The unique ID for the artifact.
+   * @returns The full GCS object key, e.g., `artifacts/job_123/llm_456.json`
+   */
+  artifact: (jobId: Core.JobId, artifactId: LLM.LLMArtifactId): string =>
+    Schema.encodeSync(ArtifactPathParser)([
+      STORAGE_PATHS.ARTIFACTS_PREFIX,
+      "/",
+      jobId,
+      "/",
+      artifactId,
+      ".json"
+    ]),
+
+  /**
+   * Generates the prefix for listing all artifacts for a specific job.
+   * @param jobId The ID of the job to list artifacts for.
+   * @returns The GCS prefix, e.g., `artifacts/job_123/`
+   */
+  artifacts: (jobId: Core.JobId): string => `${STORAGE_PATHS.ARTIFACTS_PREFIX}/${jobId}/`,
+
+  /**
+   * Returns the prefix for listing all artifacts across all jobs.
+   */
+  allArtifacts: (): string => `${STORAGE_PATHS.ARTIFACTS_PREFIX}/`,
 
   /**
    * Type-safe path parsing utilities.

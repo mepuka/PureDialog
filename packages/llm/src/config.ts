@@ -1,3 +1,4 @@
+import type { LLM } from "@puredialog/domain"
 import { Config } from "effect"
 
 export const GeminiConfig = Config.all({
@@ -17,4 +18,14 @@ export const GeminiConfig = Config.all({
   backoff: Config.number("GEMINI_BACKOFF").pipe(
     Config.withDefault(1000)
   )
+})
+
+/**
+ * Convert Effect Config to domain ProviderConfig schema.
+ */
+export const toProviderConfig = (config: Config.Config.Success<typeof GeminiConfig>): LLM.GeminiProviderConfig => ({
+  provider: "gemini" as const,
+  model: config.model,
+  temperature: config.temperature,
+  mediaResolution: "low"
 })

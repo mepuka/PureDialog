@@ -1,4 +1,5 @@
-import type { Core, Jobs } from "@puredialog/domain"
+import type { Core } from "@puredialog/domain"
+import { Jobs } from "@puredialog/domain"
 import { Schema } from "effect"
 
 /**
@@ -9,7 +10,8 @@ export const STORAGE_PATHS = {
   JOBS_PREFIX: "jobs",
   TRANSCRIPTS_PREFIX: "transcripts",
   IDEMPOTENCY_PREFIX: "idempotency",
-  EVENTS_PREFIX: "events"
+  EVENTS_PREFIX: "events",
+  ARTIFACTS_PREFIX: "artifacts"
 } as const
 
 /**
@@ -21,7 +23,7 @@ export const STORAGE_PATHS = {
 export const JobPathParser = Schema.TemplateLiteralParser(
   Schema.Literal(STORAGE_PATHS.JOBS_PREFIX),
   "/",
-  Schema.String, // JobStatus
+  Jobs.JobStatus, // JobStatus
   "/",
   Schema.String, // JobId
   ".json"
@@ -65,6 +67,19 @@ export const EventPathParser = Schema.TemplateLiteralParser(
 export type EventPathTuple = Schema.Schema.Type<typeof EventPathParser>
 // Type: readonly ["events", "/", string, "/", string, ".json"]
 
+// Artifact path schema: "artifacts/{jobId}/{artifactId}.json"
+export const ArtifactPathParser = Schema.TemplateLiteralParser(
+  Schema.Literal(STORAGE_PATHS.ARTIFACTS_PREFIX),
+  "/",
+  Schema.String, // JobId
+  "/",
+  Schema.String, // ArtifactId
+  ".json"
+)
+
+export type ArtifactPathTuple = Schema.Schema.Type<typeof ArtifactPathParser>
+// Type: readonly ["artifacts", "/", string, "/", string, ".json"]
+
 /**
  * Eventarc path patterns that mirror our Schema parsers.
  * Used in Pulumi infrastructure code for trigger configuration.
@@ -72,90 +87,120 @@ export type EventPathTuple = Schema.Schema.Type<typeof EventPathParser>
 export const EVENTARC_PATTERNS = {
   JOB_EVENTS: `${STORAGE_PATHS.JOBS_PREFIX}/{status}/{jobId}.json`,
   TRANSCRIPT_EVENTS: `${STORAGE_PATHS.TRANSCRIPTS_PREFIX}/{transcriptId}.json`,
-  EVENT_LOG: `${STORAGE_PATHS.EVENTS_PREFIX}/{jobId}/{eventId}.json`
+  EVENT_LOG: `${STORAGE_PATHS.EVENTS_PREFIX}/{jobId}/{eventId}.json`,
+  ARTIFACT_EVENTS: `${STORAGE_PATHS.ARTIFACTS_PREFIX}/{jobId}/{artifactId}.json`
 } as const
+
+/**
+ * Transformed path schemas with discriminators for union parsing.
+ */
+
+export const JobPathResult = Schema.transform(
+  JobPathParser,
+  Schema.Struct({
+    type: Schema.Literal("job"),
+    status: Schema.String,
+    jobId: Schema.String,
+    originalPath: Schema.String
+  }),
+  {
+    strict: true,
+    decode: (tuple) => ({
+      type: "job" as const,
+      status: tuple[2], // JobStatus at index 2
+      jobId: tuple[4], // JobId at index 4
+      originalPath: Schema.encodeSync(JobPathParser)(tuple)
+    }),
+    encode: ({ originalPath }) => Schema.decodeUnknownSync(JobPathParser)(originalPath)
+  }
+)
+
+const TranscriptPathResult = Schema.transform(
+  TranscriptPathParser,
+  Schema.Struct({
+    type: Schema.Literal("transcript"),
+    transcriptId: Schema.String,
+    originalPath: Schema.String
+  }),
+  {
+    strict: true,
+    decode: (tuple) => ({
+      type: "transcript" as const,
+      transcriptId: tuple[2], // TranscriptId at index 2
+      originalPath: Schema.encodeSync(TranscriptPathParser)(tuple)
+    }),
+    encode: ({ originalPath }) => Schema.decodeUnknownSync(TranscriptPathParser)(originalPath)
+  }
+)
+
+const IdempotencyPathResult = Schema.transform(
+  IdempotencyPathParser,
+  Schema.Struct({
+    type: Schema.Literal("idempotency"),
+    hashedKey: Schema.String,
+    originalPath: Schema.String
+  }),
+  {
+    strict: true,
+    decode: (tuple) => ({
+      type: "idempotency" as const,
+      hashedKey: tuple[2], // HashedKey at index 2
+      originalPath: Schema.encodeSync(IdempotencyPathParser)(tuple)
+    }),
+    encode: ({ originalPath }) => Schema.decodeUnknownSync(IdempotencyPathParser)(originalPath)
+  }
+)
+
+const EventPathResult = Schema.transform(
+  EventPathParser,
+  Schema.Struct({
+    type: Schema.Literal("event"),
+    jobId: Schema.String,
+    eventId: Schema.String,
+    originalPath: Schema.String
+  }),
+  {
+    strict: true,
+    decode: (tuple) => ({
+      type: "event" as const,
+      jobId: tuple[2], // JobId at index 2
+      eventId: tuple[4], // EventId at index 4
+      originalPath: Schema.encodeSync(EventPathParser)(tuple)
+    }),
+    encode: ({ originalPath }) => Schema.decodeUnknownSync(EventPathParser)(originalPath)
+  }
+)
+
+const ArtifactPathResult = Schema.transform(
+  ArtifactPathParser,
+  Schema.Struct({
+    type: Schema.Literal("artifact"),
+    jobId: Schema.String,
+    artifactId: Schema.String,
+    originalPath: Schema.String
+  }),
+  {
+    strict: true,
+    decode: (tuple) => ({
+      type: "artifact" as const,
+      jobId: tuple[2], // JobId at index 2
+      artifactId: tuple[4], // ArtifactId at index 4
+      originalPath: Schema.encodeSync(ArtifactPathParser)(tuple)
+    }),
+    encode: ({ originalPath }) => Schema.decodeUnknownSync(ArtifactPathParser)(originalPath)
+  }
+)
 
 /**
  * Union schema that can parse any valid GCS path.
  * Returns a discriminated union based on the path pattern.
  */
 export const GcsPathParser = Schema.Union(
-  // Transform job path parser to include discriminator
-  Schema.transform(
-    JobPathParser,
-    Schema.Struct({
-      type: Schema.Literal("job"),
-      status: Schema.String,
-      jobId: Schema.String,
-      originalPath: Schema.String
-    }),
-    {
-      strict: true,
-      decode: (tuple) => ({
-        type: "job" as const,
-        status: tuple[2], // JobStatus at index 2
-        jobId: tuple[4], // JobId at index 4
-        originalPath: Schema.encodeSync(JobPathParser)(tuple)
-      }),
-      encode: ({ originalPath }) => Schema.decodeUnknownSync(JobPathParser)(originalPath)
-    }
-  ),
-  // Transform transcript path parser to include discriminator
-  Schema.transform(
-    TranscriptPathParser,
-    Schema.Struct({
-      type: Schema.Literal("transcript"),
-      transcriptId: Schema.String,
-      originalPath: Schema.String
-    }),
-    {
-      strict: true,
-      decode: (tuple) => ({
-        type: "transcript" as const,
-        transcriptId: tuple[2], // TranscriptId at index 2
-        originalPath: Schema.encodeSync(TranscriptPathParser)(tuple)
-      }),
-      encode: ({ originalPath }) => Schema.decodeUnknownSync(TranscriptPathParser)(originalPath)
-    }
-  ),
-  // Transform idempotency path parser to include discriminator
-  Schema.transform(
-    IdempotencyPathParser,
-    Schema.Struct({
-      type: Schema.Literal("idempotency"),
-      hashedKey: Schema.String,
-      originalPath: Schema.String
-    }),
-    {
-      strict: true,
-      decode: (tuple) => ({
-        type: "idempotency" as const,
-        hashedKey: tuple[2], // HashedKey at index 2
-        originalPath: Schema.encodeSync(IdempotencyPathParser)(tuple)
-      }),
-      encode: ({ originalPath }) => Schema.decodeUnknownSync(IdempotencyPathParser)(originalPath)
-    }
-  ),
-  // Transform event log path parser to include discriminator
-  Schema.transform(
-    EventPathParser,
-    Schema.Struct({
-      type: Schema.Literal("event"),
-      jobId: Schema.String,
-      eventId: Schema.String,
-      originalPath: Schema.String
-    }),
-    {
-      strict: true,
-      decode: (tuple) => ({
-        type: "event" as const,
-        jobId: tuple[2], // JobId at index 2
-        eventId: tuple[4], // EventId at index 4
-        originalPath: Schema.encodeSync(EventPathParser)(tuple)
-      }),
-      encode: ({ originalPath }) => Schema.decodeUnknownSync(EventPathParser)(originalPath)
-    }
-  )
+  JobPathResult,
+  TranscriptPathResult,
+  IdempotencyPathResult,
+  EventPathResult,
+  ArtifactPathResult
 )
 
 export type GcsPathParseResult = Schema.Schema.Type<typeof GcsPathParser>
@@ -226,6 +271,21 @@ export const PathParsers = {
   extractEventComponents: (tuple: EventPathTuple): { jobId: Core.JobId; eventId: string } => ({
     jobId: tuple[2] as Core.JobId,
     eventId: tuple[4]
+  }),
+
+  /**
+   * Parse an artifact path into structured components.
+   * @param path - GCS object path like "artifacts/job_123/llm_456.json"
+   * @returns Parsed tuple: ["artifacts", "/", "job_123", "/", "llm_456", ".json"]
+   */
+  parseArtifactPath: Schema.decodeUnknownSync(ArtifactPathParser),
+
+  /**
+   * Extract job ID and artifact ID from a parsed artifact path tuple.
+   */
+  extractArtifactComponents: (tuple: ArtifactPathTuple): { jobId: Core.JobId; artifactId: string } => ({
+    jobId: tuple[2] as Core.JobId,
+    artifactId: tuple[4]
   })
 } as const
 

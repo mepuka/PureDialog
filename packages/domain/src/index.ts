@@ -28,3 +28,6 @@ export * as CloudEvents from "./cloudevents/index.js"
 
 // Worker schemas (HTTP contracts, errors)
 export * as Workers from "./workers/index.js"
+
+// LLM schemas (provider config, execution metadata, artifacts)
+export * as LLM from "./llm/index.js"

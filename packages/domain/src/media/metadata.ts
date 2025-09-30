@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import { JobId, MediaResourceId } from "../core/ids.js"
 import { LanguageCode } from "../core/types.js"
+import { LLMArtifactId } from "../llm/ids.js"
 import { Speaker } from "./speakers.js"
 
 /**
@@ -16,9 +17,9 @@ const MediaFormat = Schema.Literal(
 )
 
 /**
- * The canonical MediaMetadata entity with improved optional parameter handling.
- * This is the complete, structured context extracted from a MediaResource
- * before the transcription process begins.
+ * Base MediaMetadata entity.
+ * This is the structured context extracted from a MediaResource via API calls
+ * (e.g., YouTube API) before any LLM enrichment.
  */
 export const MediaMetadata = Schema.Struct({
   mediaResourceId: MediaResourceId,
@@ -107,6 +108,35 @@ export const MediaMetadata = Schema.Struct({
   ),
   createdAt: Schema.Date
 }).annotations({
-  description: "Complete metadata extracted from media resources for transcription processing"
+  description: "Base metadata extracted from media resources via API calls (no LLM enrichment)"
 })
 export type MediaMetadata = Schema.Schema.Type<typeof MediaMetadata>
+
+/**
+ * LLM enrichment metadata reference.
+ * Links to the LLM artifact that performed the enrichment.
+ */
+export const EnrichmentMetadata = Schema.Struct({
+  llmArtifactId: LLMArtifactId,
+  enrichedAt: Schema.Date
+}).annotations({
+  description: "Reference to LLM artifact that enriched this metadata"
+})
+export type EnrichmentMetadata = Schema.Schema.Type<typeof EnrichmentMetadata>
+
+/**
+ * Enriched MediaMetadata with LLM-enhanced fields.
+ * Extends base MediaMetadata with enrichment traceability.
+ * Use this when metadata has been processed through LLM enrichment.
+ */
+export const EnrichedMediaMetadata = MediaMetadata.pipe(
+  Schema.extend(
+    Schema.Struct({
+      enrichment: EnrichmentMetadata
+    })
+  ),
+  Schema.annotations({
+    description: "MediaMetadata with LLM enrichment applied"
+  })
+)
+export type EnrichedMediaMetadata = Schema.Schema.Type<typeof EnrichedMediaMetadata>

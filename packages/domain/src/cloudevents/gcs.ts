@@ -51,20 +51,24 @@ export type GcsObjectMetadata = Schema.Schema.Type<typeof GcsObjectMetadata>
  * The CloudEvent for a GCS object finalized event.
  * GCS always provides a subject, so we make it required.
  */
+
+export type GcsObjectFinalizedEventString = Schema.Schema.Type<typeof GcsObjectFinalizedEventString>
+export const GcsObjectFinalizedEventString = Schema.Literal("google.cloud.storage.object.v1.finalized")
+
 export const GcsObjectFinalizedEvent = Schema.Struct({
   // Required CloudEvents fields
   id: Schema.String.pipe(Schema.brand("CloudEventId")),
   source: Schema.String,
-  specversion: Schema.Literal("1.0"),
-  type: Schema.Literal("google.cloud.storage.object.v1.finalized"),
+  specversion: Schema.String,
+  type: GcsObjectFinalizedEventString,
 
   // Required for GCS events
-  subject: Schema.String,
+  subject: Schema.DateTimeUtc,
 
   // Optional CloudEvents fields
   datacontenttype: Schema.optional(Schema.String),
   dataschema: Schema.optional(Schema.String),
-  time: Schema.optional(Schema.DateFromString),
+  time: Schema.DateFromString,
 
   // GCS object metadata
   data: GcsObjectMetadata

@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import { JobId, TranscriptId } from "../core/ids.js"
 import { TimestampString } from "../core/types.js"
+import { LLMArtifactId } from "../llm/ids.js"
 import { MediaResource } from "../media/resources.js"
 import { SpeakerRole } from "../media/speakers.js"
 import { TranscriptionContext } from "./context.js"
@@ -43,6 +44,9 @@ export const Transcript = Schema.Struct({
 
   // Context used for generation
   transcriptionContext: TranscriptionContext,
+
+  // LLM artifact reference for full execution traceability
+  llmArtifactId: LLMArtifactId,
 
   createdAt: Schema.Date,
   updatedAt: Schema.Date

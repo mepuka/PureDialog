@@ -25,7 +25,7 @@ type EventProcessingResult = Schema.Schema.Type<typeof EventProcessingResult>
  * Store a job event in both GCS (immutable log) and KV store (quick access)
  */
 const storeJobEvent = (
-  event: GcsJobFinalizedEvent,
+  event: CloudEvents.Gcs.GcsObjectFinalizedEvent,
   domainEvent: Jobs.JobStatusChanged
 ) =>
   Effect.gen(function*() {
@@ -33,43 +33,48 @@ const storeJobEvent = (
     const config = yield* Config.CloudStorageConfig
     const kv = yield* KeyValueStore.KeyValueStore
 
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     // Store in GCS for immutable event log
-    const eventPath = Index.event(event.jobId, event.eventId)
+    const eventPath = Index.event(jobEvent.jobId, jobEvent.eventId)
+
     yield* storage.putObject(config.bucket, eventPath, domainEvent)
 
     // Store in KV for quick access (key: jobId, value: latest event)
     const kvStore = kv.forSchema(Jobs.JobStatusChanged)
-    yield* kvStore.set(event.jobId, domainEvent)
+    yield* kvStore.set(jobEvent.jobId, domainEvent)
 
     yield* Effect.logInfo("Stored job event", {
-      jobId: event.jobId,
-      status: event.status,
-      eventId: event.eventId,
+      jobId: jobEvent.jobId,
+      status: jobEvent.status,
+      eventId: jobEvent.eventId,
       gcsPath: eventPath,
-      kvKey: event.jobId
+      kvKey: jobEvent.jobId
     })
   })
 
 /**
  * Handle a job transitioning to Queued state
  */
-const handleQueuedJob = (event: GcsJobFinalizedEvent) =>
+const handleQueuedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       requestId: "external-notification" as any,
       from: "Queued",
       to: "Queued",
-      occurredAt: event.eventTime
+      occurredAt: jobEvent.eventTime
     })
 
     yield* storeJobEvent(event, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobQueued",
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       status: "Queued",
-      eventId: event.eventId,
+      eventId: jobEvent.eventId,
       processed: true,
       stored: true,
       message: "Job queued for processing"
@@ -79,23 +84,25 @@ const handleQueuedJob = (event: GcsJobFinalizedEvent) =>
 /**
  * Handle a job transitioning to Processing state
  */
-const handleProcessingJob = (event: GcsJobFinalizedEvent) =>
+const handleProcessingJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       requestId: "external-notification" as any,
       from: "Queued",
       to: "Processing",
-      occurredAt: event.eventTime
+      occurredAt: jobEvent.eventTime
     })
 
     yield* storeJobEvent(event, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobProcessing",
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       status: "Processing",
-      eventId: event.eventId,
+      eventId: jobEvent.eventId,
       processed: true,
       stored: true,
       message: "Job started processing"
@@ -105,23 +112,25 @@ const handleProcessingJob = (event: GcsJobFinalizedEvent) =>
 /**
  * Handle a job transitioning to Completed state
  */
-const handleCompletedJob = (event: GcsJobFinalizedEvent) =>
+const handleCompletedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       requestId: "external-notification" as any,
       from: "Processing",
       to: "Completed",
-      occurredAt: event.eventTime
+      occurredAt: jobEvent.eventTime
     })
 
     yield* storeJobEvent(event, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobCompleted",
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       status: "Completed",
-      eventId: event.eventId,
+      eventId: jobEvent.eventId,
       processed: true,
       stored: true,
       message: "Job completed successfully"
@@ -131,23 +140,25 @@ const handleCompletedJob = (event: GcsJobFinalizedEvent) =>
 /**
  * Handle a job transitioning to Failed state
  */
-const handleFailedJob = (event: GcsJobFinalizedEvent) =>
+const handleFailedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       requestId: "external-notification" as any,
       from: "Processing",
       to: "Failed",
-      occurredAt: event.eventTime
+      occurredAt: jobEvent.eventTime
     })
 
     yield* storeJobEvent(event, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobFailed",
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       status: "Failed",
-      eventId: event.eventId,
+      eventId: jobEvent.eventId,
       processed: true,
       stored: true,
       message: "Job failed during processing"
@@ -157,23 +168,25 @@ const handleFailedJob = (event: GcsJobFinalizedEvent) =>
 /**
  * Handle a job transitioning to Cancelled state
  */
-const handleCancelledJob = (event: GcsJobFinalizedEvent) =>
+const handleCancelledJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
+    const jobEvent = GcsJobFinalizedEvent(event)
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       requestId: "external-notification" as any,
       from: "Processing",
       to: "Cancelled",
-      occurredAt: event.eventTime
+      occurredAt: jobEvent.eventTime
     })
 
     yield* storeJobEvent(event, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobCancelled",
-      jobId: event.jobId,
+      jobId: jobEvent.jobId,
       status: "Cancelled",
-      eventId: event.eventId,
+      eventId: jobEvent.eventId,
       processed: true,
       stored: true,
       message: "Job was cancelled"
@@ -187,15 +200,20 @@ const handleCancelledJob = (event: GcsJobFinalizedEvent) =>
 const handleNotification = (cloudEvent: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     // Parse the CloudEvent into a job-specific event
-    const event = yield* Schema.decodeUnknown(GcsJobFinalizedEvent)(cloudEvent)
+    const event = GcsJobFinalizedEvent(cloudEvent)
+    yield* Effect.logInfo("Decoded job event", {
+      jobId: event.jobId,
+      status: event.status,
+      eventId: event.eventId
+    })
 
     // Use Match for the job status union type
     return yield* Match.value(event.status).pipe(
-      Match.when("Queued", () => handleQueuedJob(event)),
-      Match.when("Processing", () => handleProcessingJob(event)),
-      Match.when("Completed", () => handleCompletedJob(event)),
-      Match.when("Failed", () => handleFailedJob(event)),
-      Match.when("Cancelled", () => handleCancelledJob(event)),
+      Match.when("Queued", () => handleQueuedJob(cloudEvent)),
+      Match.when("Processing", () => handleProcessingJob(cloudEvent)),
+      Match.when("Completed", () => handleCompletedJob(cloudEvent)),
+      Match.when("Failed", () => handleFailedJob(cloudEvent)),
+      Match.when("Cancelled", () => handleCancelledJob(cloudEvent)),
       Match.when("MetadataReady", () =>
         Effect.fail(
           new HttpApiError.InternalServerError().pipe(

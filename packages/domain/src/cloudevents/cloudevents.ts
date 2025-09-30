@@ -19,7 +19,7 @@ export const CloudEventsAttributes = Schema.Struct({
       description: "Event source URI (e.g., //storage.googleapis.com/projects/_/buckets/BUCKET)"
     })
   ),
-  specversion: Schema.Literal("1.0").pipe(
+  specversion: Schema.String.pipe(
     Schema.annotations({
       description: "CloudEvents specification version"
     })

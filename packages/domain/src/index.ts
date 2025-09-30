@@ -22,3 +22,9 @@ export * as YouTube from "./youtube/index.js"
 
 // Error types and schemas
 export * as Errors from "./errors/index.js"
+
+// Event schemas (CloudEvents, GCS)
+export * as CloudEvents from "./cloudevents/index.js"
+
+// Worker schemas (HTTP contracts, errors)
+export * as Workers from "./workers/index.js"

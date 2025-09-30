@@ -8,9 +8,13 @@ import type { CreateJobRequest } from "../http/schemas.js"
 const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
 const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
 
+/**
+ * Create a new QueuedJob from an API request.
+ * Uses proper Schema constructors for type safety.
+ */
 export const createTranscriptionJob = (
   payload: CreateJobRequest
-): Effect.Effect<Jobs.TranscriptionJob> =>
+): Effect.Effect<Jobs.QueuedJob> =>
   Effect.sync(() => {
     const jobId = generateJobId()
     const requestId = generateRequestId()
@@ -22,19 +26,15 @@ export const createTranscriptionJob = (
       idempotencyKey = idempotencyKeyToString(generateIdempotencyKey("/jobs", payload.media))
     }
 
-    return new Jobs.TranscriptionJob({
+    // Use Schema constructor for type-safe job creation
+    return Jobs.QueuedJob.make({
       id: jobId,
       requestId,
       media: payload.media,
-      status: "Queued",
       attempts: 0,
       createdAt: now,
       updatedAt: now,
       transcriptionContext: payload.transcriptionContext,
-      idempotencyKey,
-      metadata: {
-        priority: "normal",
-        source: "api"
-      }
+      idempotencyKey
     })
   })

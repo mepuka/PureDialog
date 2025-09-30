@@ -9,8 +9,8 @@ import { JobRepository, JobRepositoryLayer, RepositoryError } from "./JobReposit
  */
 export interface JobStoreInterface {
   readonly createJob: (
-    job: Jobs.TranscriptionJob
-  ) => Effect.Effect<Jobs.TranscriptionJob, RepositoryError>
+    job: Jobs.QueuedJob
+  ) => Effect.Effect<Jobs.QueuedJob, RepositoryError>
   readonly findJobById: (
     jobId: Core.JobId
   ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
@@ -41,13 +41,13 @@ export const JobStoreMock = EffectLayer.sync(JobStore, () => {
   const idempotencyMap = new Map<string, Core.JobId>()
 
   return {
-    createJob: (job: Jobs.TranscriptionJob) =>
+    createJob: (job: Jobs.QueuedJob) =>
       Effect.gen(function*() {
         if (job.idempotencyKey) {
           const existingJobId = idempotencyMap.get(job.idempotencyKey)
           if (existingJobId) {
             const existingJob = jobs.get(existingJobId)
-            if (existingJob) {
+            if (existingJob && existingJob._tag === "QueuedJob") {
               yield* Effect.logInfo(`Returning existing job: ${existingJob.id}`)
               return existingJob
             }
@@ -97,13 +97,61 @@ export const JobStoreMock = EffectLayer.sync(JobStore, () => {
           )
         }
 
-        const updatedJob = Jobs.TranscriptionJob.make({
-          ...existingJob,
-          status,
-          error,
-          transcriptId: transcriptId || existingJob.transcriptId,
-          updatedAt: new Date()
-        })
+        // Use type-safe transitions for status updates
+        let updatedJob: Jobs.TranscriptionJob
+
+        if (status === "Failed") {
+          if (!Jobs.isActiveJob(existingJob)) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                message: `Cannot transition terminal job to Failed: ${jobId}`,
+                operation: "updateStatus",
+                cause: new Error(`Job is already in terminal state: ${existingJob._tag}`)
+              })
+            )
+          }
+          updatedJob = Jobs.JobTransitions.fail(existingJob, error || "Unknown error")
+        } else if (status === "Cancelled") {
+          if (!Jobs.isActiveJob(existingJob)) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                message: `Cannot transition terminal job to Cancelled: ${jobId}`,
+                operation: "updateStatus",
+                cause: new Error(`Job is already in terminal state: ${existingJob._tag}`)
+              })
+            )
+          }
+          updatedJob = Jobs.JobTransitions.cancel(existingJob, error || "Cancelled")
+        } else if (status === "Completed") {
+          // Completed requires specific transition from ProcessingJob
+          if (existingJob._tag !== "ProcessingJob") {
+            return yield* Effect.fail(
+              new RepositoryError({
+                message: `Cannot complete job that is not processing: ${jobId}`,
+                operation: "updateStatus",
+                cause: new Error(`Current state: ${existingJob._tag}`)
+              })
+            )
+          }
+          if (!transcriptId) {
+            return yield* Effect.fail(
+              new RepositoryError({
+                message: `Cannot complete job without transcriptId: ${jobId}`,
+                operation: "updateStatus"
+              })
+            )
+          }
+          updatedJob = Jobs.JobTransitions.complete(existingJob, transcriptId)
+        } else {
+          // For other statuses, preserve existing behavior
+          return yield* Effect.fail(
+            new RepositoryError({
+              message: `Unsupported status transition: ${status}`,
+              operation: "updateStatus",
+              cause: new Error(`Current state: ${existingJob._tag}`)
+            })
+          )
+        }
 
         jobs.set(jobId, updatedJob)
 
@@ -121,20 +169,15 @@ const JobStoreLayer = EffectLayer.effect(
   Effect.gen(function*() {
     const repository = yield* JobRepository
 
-    const mapError = (error: RepositoryError) =>
-      new RepositoryError({ message: error.message, operation: error.operation })
-
     return {
-      createJob: (job: Jobs.TranscriptionJob) => repository.createJob(job).pipe(Effect.mapError(mapError)),
+      createJob: (job: Jobs.QueuedJob) => repository.createJob(job),
 
-      findJobByIdempotencyKey: (key) => repository.findJobByIdempotencyKey(key).pipe(Effect.mapError(mapError)),
+      findJobByIdempotencyKey: (key) => repository.findJobByIdempotencyKey(key),
 
       updateJobStatus: (jobId, status, error, transcriptId) =>
-        repository
-          .updateJobStatus(jobId, status, error, transcriptId)
-          .pipe(Effect.mapError(mapError)),
+        repository.updateJobStatus(jobId, status, error, transcriptId),
 
-      findJobById: (jobId) => repository.findJobById(jobId).pipe(Effect.mapError(mapError))
+      findJobById: (jobId) => repository.findJobById(jobId)
     } as JobStoreInterface
   })
 )

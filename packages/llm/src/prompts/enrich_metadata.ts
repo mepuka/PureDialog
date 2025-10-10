@@ -5,7 +5,8 @@ import type { Media } from "@puredialog/domain"
  * Parses unstructured text (e.g., YouTube comments, descriptions) into structured fields.
  */
 
-export const systemInstruction = `You are a metadata enrichment specialist. Extract structured information from unstructured text related to media content.`
+export const systemInstruction =
+  `You are a metadata enrichment specialist. Extract structured information from unstructured text related to media content.`
 
 export const enrichmentInstructions = (
   baseMetadata: Media.MediaMetadata,

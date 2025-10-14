@@ -1,22 +1,35 @@
 #!/usr/bin/env tsx
 import { JobId, LanguageCode, MediaMetadata, MediaResourceId, YouTubeVideo, YouTubeVideoId } from "@puredialog/domain"
-import { Cause, Console, Effect, } from "effect"
+import { Cause, Console, Effect } from "effect"
 import { LLMService, LLMServiceLive } from "../src/service.js"
-import {listVideoresponse} from "./example_list_videos_response.json"
-import { GeminiConfig } from "../src/config.js"
+import { listVideoresponse } from "./example_list_videos_response.json"
 
 const defaultVideoId = "dDPOpax2JBA" as YouTubeVideoId
 
+function parseISO8601Duration(duration: string): number {
+  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
+  const matches = duration.match(regex)
+  if (!matches) {
+    return 0
+  }
+  const hours = parseInt(matches[1] || "0")
+  const minutes = parseInt(matches[2] || "0")
+  const seconds = parseInt(matches[3] || "0")
+  return hours * 3600 + minutes * 60 + seconds
+}
+
 const youtubeVideo = YouTubeVideo.make({
-    id: YouTubeVideoId.make(defaultVideoId),
-    title: listVideoresponse.items[0].snippet.title,
-    description: listVideoresponse.items[0].snippet.description,
-    tags: listVideoresponse.items[0].snippet.tags,
-    duration: listVideoresponse.items[0].contentDetails.duration ? parseISO8601Duration(listVideoresponse.items[0].contentDetails.duration) : 0,
-    channelId: listVideoresponse.items[0].snippet.channelId,
-    channelTitle: listVideoresponse.items[0].snippet.channelTitle,
-    publishedAt: listVideoresponse.items[0].snippet.publishedAt,
-    language: listVideoresponse.items[0].snippet.defaultAudioLanguage
+  id: YouTubeVideoId.make(defaultVideoId),
+  title: listVideoresponse.items[0].snippet.title,
+  description: listVideoresponse.items[0].snippet.description,
+  tags: listVideoresponse.items[0].snippet.tags,
+  duration: listVideoresponse.items[0].contentDetails.duration
+    ? parseISO8601Duration(listVideoresponse.items[0].contentDetails.duration)
+    : 0,
+  channelId: listVideoresponse.items[0].snippet.channelId,
+  channelTitle: listVideoresponse.items[0].snippet.channelTitle,
+  publishedAt: listVideoresponse.items[0].snippet.publishedAt,
+  language: listVideoresponse.items[0].snippet.defaultAudioLanguage
 })
 
 const program = Effect.gen(function*() {
@@ -30,13 +43,14 @@ const program = Effect.gen(function*() {
       {
         name: "Kudzai Manditereza",
         role: "host",
-        affiliation: { name: "Industry40.tv",  },
-        bio: `I help digital manufacturing professionals master the implementation of Intelligent Manufacturing with Industrial IoT and AI solutions.
+        affiliation: { name: "Industry40.tv" },
+        bio:
+          `I help digital manufacturing professionals master the implementation of Intelligent Manufacturing with Industrial IoT and AI solutions.
 
 I teach digital factory architectural principles and techniques, and I host a weekly podcast, AI in Manufacturing where I interview leading AI practitioners to provide you with detailed insights.`
       }
     ],
-    domain: ["Industrial automation"] , 
+    domain: ["Industrial automation"],
     tags: ["manufacturing", "engineering", "automation", "OT/IT", "digital factory"],
     format: "one_on_one_interview",
     language: LanguageCode.make("en"),
@@ -50,14 +64,16 @@ Learn how AI is revolutionizing the manufacturing industry and how you can find 
   })
 
   yield* Console.log("Starting transcription...")
-  const transcript = yield* service.transcribeMedia(youtubeVideo, metadata )
-  
+  const transcript = yield* service.transcribeMedia(youtubeVideo, metadata)
+
   yield* Console.log(`Transcription completed! Found ${transcript.length} dialogue turns`)
-  
+
   // Print first few turns for verification
-  transcript.slice(0, 3).forEach((turn, index) => {
-    yield* Console.log(`Turn ${index + 1}: [${turn.timestamp}] ${turn.speaker}: ${turn.text.substring(0, 50)}...`)
-  })
+  yield* Effect.forEach(
+    transcript.slice(0, 3),
+    (turn, index) =>
+      Console.log(`Turn ${index + 1}: [${turn.timestamp}] ${turn.speaker}: ${turn.text.substring(0, 50)}...`)
+  )
 })
 
 await Effect.runPromise(

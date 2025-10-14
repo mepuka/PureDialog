@@ -1,18 +1,18 @@
-import { HttpApp, HttpRouter, HttpServer } from "@effect/platform"
-import { Effect, Layer } from "effect"
+import { HttpApiBuilder } from "@effect/platform"
+import { Effect } from "effect"
 import { v4 as uuidv4 } from "uuid"
+import { contextApi } from "../http/api.js"
 import { IngestResponse } from "../http/schemas.js"
 
-export const ingestRoutes = HttpRouter.empty.pipe(
-  HttpRouter.post(
-    "/ingest",
-    Effect.succeed(
-      HttpServer.response.schemaJson(IngestResponse)({
-        id: uuidv4(),
-        status: "pending"
-      })
-    )
-  )
+export const ingestRoutes = HttpApiBuilder.group(
+  contextApi,
+  "ingest",
+  (handlers) =>
+    handlers.handle("ingest", () =>
+      Effect.succeed(
+        IngestResponse.make({
+          id: uuidv4(),
+          status: "pending"
+        })
+      ))
 )
-
-export const IngestRoutesLive = Layer.succeed(HttpApp.make, ingestRoutes)

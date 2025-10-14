@@ -6,8 +6,8 @@
   },
   "include": ["src"],
   "references": [
-    { "path": "../domain" },
-    { "path": "../ingestion" },
-    { "path": "../storage" }
+    { "path": "../domain/tsconfig.build.json" },
+    { "path": "../ingestion/tsconfig.build.json" },
+    { "path": "../storage/tsconfig.build.json" }
   ]
 }

@@ -5,8 +5,8 @@ import { Effect } from "effect"
 import { randomUUID } from "node:crypto"
 import type { CreateJobRequest } from "../http/schemas.js"
 
-const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
-const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
+export const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
+export const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
 
 /**
  * Create a new QueuedJob from an API request.

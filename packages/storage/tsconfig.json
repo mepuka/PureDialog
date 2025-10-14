@@ -3,7 +3,6 @@
   "include": ["src/**/*.ts", "src/index.ts"],
   "references": [
     { "path": "../domain/tsconfig.build.json" },
-    { "path": "../ingestion/tsconfig.build.json" },
-    { "path": "./tsconfig.src.json" }
+    { "path": "../ingestion/tsconfig.build.json" }
   ]
 }

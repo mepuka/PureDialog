@@ -1,22 +1,14 @@
-import { HttpApp, HttpRouter, HttpServer } from "@effect/platform"
-import { Effect, Layer, Schedule } from "effect"
+import { HttpApiBuilder } from "@effect/platform"
+import { Effect } from "effect"
+import { queryApi } from "../http/api.js"
 
-export const queryRoutes = HttpRouter.empty.pipe(
-  HttpRouter.get(
-    "/query/stream",
-    HttpServer.response.stream(
-      Effect.succeed("hello").pipe(
-        Effect.repeat(Schedule.spaced("1 second"))
-      ),
-      {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Connection": "keep-alive",
-          "Cache-Control": "no-cache"
-        }
-      }
-    )
-  )
+export const queryRoutes = HttpApiBuilder.group(
+  queryApi,
+  "query",
+  (handlers) =>
+    handlers.handle("stream", () =>
+      Effect.succeed({
+        id: `event-${Date.now()}`,
+        content: "hello"
+      }))
 )
-
-export const QueryRoutesLive = Layer.succeed(HttpApp.make, queryRoutes)

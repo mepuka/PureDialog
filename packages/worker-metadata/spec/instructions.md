@@ -2,41 +2,46 @@
 
 ## Overview
 
-`@puredialog/worker-metadata` processes newly queued transcription jobs. The service receives Pub/Sub push notifications for work messages whose `stage` attribute is `"Queued"`. Each notification triggers metadata enrichment (YouTube lookups today, additional providers later), persists a job update, and publishes both the next work item and corresponding domain events.
+`@puredialog/worker-metadata` processes newly queued transcription jobs via **Eventarc Advanced CloudEvents**. The service receives HTTP POST requests from Eventarc Pipelines when GCS objects are created in `jobs/Queued/`. Each CloudEvent triggers metadata enrichment (YouTube lookups today, additional providers later), and atomically moves the job file to `jobs/Processing/` to trigger the next stage.
 
 ## Responsibilities
 
-- Accept Pub/Sub push requests on `/pubsub`, verify the bearer token audience, and decode the payload using `MessageAdapter.fromWorkMessage`.
-- Enforce idempotency: confirm the job is still at `Queued` by consulting `ProcessingJobStore.ensureStageTransition(jobId, "Queued")`; ack and log an `ingestion.job.skipped` event if the stage already advanced.
+- Accept CloudEvents HTTP POST on `/` endpoint, parse CloudEvents v1.0 envelope with GCS object finalized payload
+- Extract `jobId` and `status` from CloudEvent `subject` field (`objects/jobs/Queued/{jobId}.json`)
+- Enforce idempotency: validate job is still in `Queued` state; skip processing if already advanced
 - Fetch external metadata:
-  - `media.type === "youtube"`: resolve via `YoutubeApiClient getVideo` + `getChannel`.
-  - Prepare hooks for future media types with a dispatcher function.
-- Merge metadata onto the job (`metadataSnapshot`, `topicHints`, `preambleHash`, `durationSeconds`, etc.) and persist via `ProcessingJobStore.update(jobId, patch)`.
-- Publish downstream effects:
-  1. Updated work message with `stage = "MetadataReady"` using `MessageAdapter.encodeWork`. Include incremented `attempt` attribute and the enriched metadata payload.
-  2. `JobStatusChanged` (`Queued` → `MetadataReady`) and `MetadataReady` domain events via `MessageAdapter.encodeDomainEvent`.
-- Emit structured logs for each decision point (`metadata.worker.received`, `metadata.worker.skipped`, `metadata.worker.enriched`, `metadata.worker.publish_failed`, etc.) with `jobId`, `requestId`, `correlationId`, `stage`, `attempt`, `mediaType`, and timing metrics.
-- Surface metrics counters/histograms through the shared metrics layer: handler duration, retries, DLQ publishes, YouTube latency.
+  - `media.type === "youtube"`: resolve via `YoutubeApiClient.getVideo` + `getChannel`
+  - Prepare hooks for future media types with a dispatcher function
+- Enrich job with metadata (title, description, duration, tags, speaker hints)
+- **Atomic state transition**: Write enriched job to `jobs/Processing/{jobId}.json`, then delete from `jobs/Queued/{jobId}.json`
+- Write immutable event log: `JobStatusChanged` event to `events/{jobId}/{timestamp}_status_changed.json`
+- Return HTTP 200 with structured response on all outcomes (success and errors) to prevent Eventarc retries
+- Move job to `jobs/Failed/{jobId}.json` on non-recoverable errors
+- Emit structured logs for each decision point (`metadata.worker.received`, `metadata.worker.skipped`, `metadata.worker.enriched`, `metadata.worker.failed`) with `jobId`, `requestId`, `mediaType`, and timing metrics
+- Surface metrics counters/histograms: handler duration, YouTube API latency, success/skip/failure rates
 
 ## HTTP Surface
 
-- Use Effect's `HttpApi`/`HttpApiBuilder` just like the API service:
-  - API name: `MetadataWorkerApi` with groups `health` (`GET /health`) and `pubsub` (`POST /pubsub`).
-  - `POST /pubsub` endpoint accepts the Google push schema:
+- Use Effect's `HttpApi`/`HttpApiBuilder` pattern:
+  - API name: `MetadataWorkerApi` with groups `health` (`GET /health`) and `events` (`POST /`)
+  - `POST /` endpoint accepts CloudEvents v1.0 format:
     ```ts
-    interface PubSubPushBody {
-      readonly message: {
-        readonly data: string; // base64 JSON payload
-        readonly attributes?: Record<string, string>;
-        readonly messageId: string;
-        readonly publishTime: string;
-      };
-      readonly subscription: string;
+    interface CloudEventRequest {
+      readonly id: string
+      readonly source: string // "//storage.googleapis.com/projects/_/buckets/BUCKET"
+      readonly specversion: "1.0"
+      readonly type: "google.cloud.storage.object.v1.finalized"
+      readonly subject: string // "objects/jobs/Queued/{jobId}.json"
+      readonly time: string // ISO 8601
+      readonly data: GcsObjectMetadata
     }
     ```
-  - Decode the body using `Schema` combinators. Reject requests missing required fields with `return yield* HttpServerResponse.json({ error: "invalid push" }, { status: 400 })`.
-  - Always return a JSON ack `{ status: "ack" }` on success. Non-retryable errors (malformed payload, unknown stage) should still return 200 to avoid redelivery after reporting to DLQ.
-- Add middleware for authentication if we later validate OIDC tokens; keep the spec extensible.
+  - Decode the body using `Workers.WorkerCloudEventRequest` schema from `@puredialog/domain`
+  - Parse GCS metadata from `data` field using `Events.GcsObjectMetadata` schema
+  - Extract job info using `extractJobFromSubject(event.subject)` from `@puredialog/storage`
+  - Always return HTTP 200 with structured JSON response (success or error) to prevent Eventarc retries
+  - Response schemas: `Workers.WorkerProcessingResponse` or `Workers.WorkerErrorResponse`
+- Add middleware for OIDC token validation in future (Eventarc sends signed JWTs); keep the spec extensible
 
 ## Business Logic Flow
 

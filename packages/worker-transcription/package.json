@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@effect/platform": "latest",
+    "@effect/platform-node": "latest",
     "@effect/sql": "latest",
     "effect": "latest",
     "@puredialog/domain": "workspace:^",

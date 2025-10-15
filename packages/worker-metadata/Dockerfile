@@ -29,9 +29,13 @@ FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
 
+# Copy entire workspace structure for proper package resolution
 COPY --from=build /workspace/node_modules ./node_modules
-COPY --from=build /workspace/packages/worker-metadata/build ./build
-COPY packages/worker-metadata/package.json ./package.json
+COPY --from=build /workspace/package.json ./package.json
+COPY --from=build /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
+
+# Copy all workspace packages with their built outputs
+COPY --from=build /workspace/packages ./packages
 
 EXPOSE 8080
-CMD ["node", "build/esm/index.js"]
+CMD ["node", "packages/worker-metadata/build/esm/index.js"]

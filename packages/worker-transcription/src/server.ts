@@ -13,12 +13,14 @@ const RoutesLive = Layer.mergeAll(healthRoutes, eventRoutes)
 
 const ApiLive = HttpApiBuilder.api(TranscriptionWorkerApi).pipe(Layer.provide(RoutesLive))
 
+const port = Number(process.env.PORT) || 3004
+
 const RuntimeLayer = Layer.mergeAll(
   LLMServiceLive,
   LLMArtifactStoreLayer,
   Config.CloudStorageConfigLayer,
   IngestionLayer.CloudStorageLayer,
-  NodeHttpServer.layer(createServer, { port: 3004 })
+  NodeHttpServer.layer(createServer, { port })
 )
 
 const ServerLayer = HttpApiBuilder.serve().pipe(

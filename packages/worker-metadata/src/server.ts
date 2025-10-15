@@ -13,12 +13,14 @@ const RoutesLive = Layer.mergeAll(healthRoutes, eventRoutes)
 
 const ApiLive = HttpApiBuilder.api(MetadataWorkerApi).pipe(Layer.provide(RoutesLive))
 
+const port = Number(process.env.PORT) || 3003
+
 const RuntimeLayer = Layer.mergeAll(
   MetadataWorkerConfigLayer,
   YoutubeClientLive,
   Config.CloudStorageConfigLayer,
   IngestionLayer.CloudStorageLayer,
-  NodeHttpServer.layer(createServer, { port: 3003 })
+  NodeHttpServer.layer(createServer, { port })
 ).pipe(Layer.provideMerge(MetadataWorkerConfigLayer))
 
 const ServerLayer = HttpApiBuilder.serve().pipe(

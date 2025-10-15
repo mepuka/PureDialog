@@ -37,4 +37,4 @@ COPY --from=build /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /workspace/packages ./packages
 
 EXPOSE 8080
-CMD ["node", "packages/api/build/esm/index.js"]
+CMD ["node", "--enable-source-maps", "packages/api/build/esm/index.js"]

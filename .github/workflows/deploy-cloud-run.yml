@@ -14,7 +14,7 @@ env:
   # Core configuration - easy to adjust
   REGION: us-west1
   REPOSITORY: puredialog
-  PULUMI_STACK: mepuka-org/pure-dialog-infra/dev
+  PULUMI_STACK: mepuka/dev
   NODE_VERSION: 22
   PNPM_VERSION: 9
   YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}

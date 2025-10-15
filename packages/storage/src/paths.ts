@@ -1,5 +1,4 @@
-import type { Core } from "@puredialog/domain"
-import { Jobs } from "@puredialog/domain"
+import type { Core, Jobs } from "@puredialog/domain"
 import { Schema } from "effect"
 
 /**
@@ -23,7 +22,14 @@ export const STORAGE_PATHS = {
 export const JobPathParser = Schema.TemplateLiteralParser(
   Schema.Literal(STORAGE_PATHS.JOBS_PREFIX),
   "/",
-  Jobs.JobStatus, // JobStatus
+  Schema.Union(
+    Schema.Literal("Queued"),
+    Schema.Literal("MetadataReady"),
+    Schema.Literal("Processing"),
+    Schema.Literal("Completed"),
+    Schema.Literal("Failed"),
+    Schema.Literal("Cancelled")
+  ),
   "/",
   Schema.String, // JobId
   ".json"

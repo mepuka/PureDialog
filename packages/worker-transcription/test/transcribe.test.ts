@@ -69,7 +69,9 @@ const llmLayer = Layer.succeed(LLMService, {
     Effect.succeed({
       turns: [
         Transcription.DialogueTurn.make({
-          timestamp: "00:00:00",
+          timestamp: Core.TimestampString.make(
+            DateTime.unsafeMake("2024-01-02T00:00:00Z").toString()
+          ),
           speaker: "host",
           text: "Welcome to the test transcript"
         })

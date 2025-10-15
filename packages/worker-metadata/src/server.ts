@@ -13,7 +13,7 @@ const RoutesLive = Layer.mergeAll(healthRoutes, eventRoutes)
 
 const ApiLive = HttpApiBuilder.api(MetadataWorkerApi).pipe(Layer.provide(RoutesLive))
 
-const port = Number(process.env.PORT) || 3003
+const port = Number(process.env.PORT) || 8080
 
 const RuntimeLayer = Layer.mergeAll(
   MetadataWorkerConfigLayer,

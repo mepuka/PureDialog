@@ -12,14 +12,12 @@ const RoutesLive = Layer.mergeAll(healthRoutes, jobRoutes, internalRoutes)
 
 const ApiLive = HttpApiBuilder.api(pureDialogApi).pipe(Layer.provide(RoutesLive))
 
-const port = Number(process.env.PORT) || 3000
-
 const ServerLive = HttpApiBuilder.serve().pipe(
   Layer.provide(HttpApiSwagger.layer({ path: "/docs" })),
   Layer.provide(ApiLive),
   Layer.provide(JobStoreLayerLive),
   HttpServer.withLogAddress,
-  Layer.provide(NodeHttpServer.layer(createServer, { port }))
+  Layer.provide(NodeHttpServer.layer(createServer, { port: 8080 }))
 )
 
 export const main = Layer.launch(ServerLive)

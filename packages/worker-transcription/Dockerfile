@@ -7,11 +7,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
   && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm@9
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.build.json ./
 COPY packages ./packages
 
-RUN pnpm install --filter @puredialog/worker-transcription --frozen-lockfile
+# Install all dependencies first (including workspace dependencies)
+RUN pnpm install --frozen-lockfile
+
+# Build workspace dependencies first
+RUN pnpm --filter @puredialog/domain build || true
+RUN pnpm --filter @puredialog/ingestion build || true
+RUN pnpm --filter @puredialog/storage build || true
+RUN pnpm --filter @puredialog/llm build || true
+
+# Now build the worker
 RUN pnpm --filter @puredialog/worker-transcription build
+
+# Prune dev dependencies
 RUN CI=1 pnpm prune --prod
 
 FROM node:22-slim AS runtime

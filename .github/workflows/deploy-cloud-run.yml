@@ -76,12 +76,12 @@ jobs:
             --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Install Pulumi dependencies
-        working-directory: infra
+        working-directory: packages/infra
         run: |
           pnpm install --frozen-lockfile
 
       - name: Configure Pulumi stack
-        working-directory: infra
+        working-directory: packages/infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
@@ -113,7 +113,7 @@ jobs:
       - name: Deploy infrastructure
         uses: pulumi/actions@v5
         with:
-          work-dir: infra
+          work-dir: packages/infra
           stack-name: ${{ env.PULUMI_STACK }}
           command: up
           args: --yes --non-interactive
@@ -123,7 +123,7 @@ jobs:
 
       - name: Show deployment results
         if: success()
-        working-directory: infra
+        working-directory: packages/infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |

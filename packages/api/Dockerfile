@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
   && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.build.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml .npmrc tsconfig.base.json tsconfig.build.json ./
 COPY packages ./packages
 
 # Install all dependencies first (including workspace dependencies)

@@ -1,4 +1,4 @@
-import { Storage } from "@google-cloud/storage"
+import { Storage as GCSStorage } from "@google-cloud/storage"
 import { Context, Effect, Layer, Option, Schema } from "effect"
 import { CloudStorageConfig, CloudStorageConfigLayer } from "./Config.js"
 import { CloudStorageError } from "./errors.js"
@@ -51,7 +51,7 @@ export const CloudStorageLayer = Layer.effect(
   CloudStorageService,
   Effect.gen(function*() {
     const config = yield* CloudStorageConfig
-    const storage = new Storage({
+    const storage = new GCSStorage({
       projectId: config.projectId,
       ...(config.keyFilename && { keyFilename: config.keyFilename })
     })

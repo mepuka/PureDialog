@@ -5,28 +5,25 @@ WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 
-COPY package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.build.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml .npmrc tsconfig.base.json tsconfig.build.json ./
 COPY packages ./packages
 
-# Install all dependencies using npm workspaces
-RUN npm install --include=dev
+# Install all dependencies first
+RUN pnpm install --frozen-lockfile
 
-# Clean any stale build artifacts
-RUN find . -name '.tsbuildinfo' -type d -exec rm -rf {} + 2>/dev/null || true
-RUN find . -name 'build' -type d -exec rm -rf {} + 2>/dev/null || true
-
-# Build workspace dependencies first
-RUN npm run clean --workspace=@puredialog/domain && npm run build --workspace=@puredialog/domain
-RUN npm run clean --workspace=@puredialog/ingestion && npm run build --workspace=@puredialog/ingestion
-RUN npm run clean --workspace=@puredialog/storage && npm run build --workspace=@puredialog/storage
-RUN npm run clean --workspace=@puredialog/llm && npm run build --workspace=@puredialog/llm
+# Build workspace dependencies (no need to clean, starting fresh)
+RUN cd packages/domain && pnpm build
+RUN cd packages/ingestion && pnpm build
+RUN cd packages/storage && pnpm build
+RUN cd packages/llm && pnpm build
 
 # Now build the worker
-RUN npm run clean --workspace=@puredialog/worker-transcription && npm run build --workspace=@puredialog/worker-transcription
+RUN cd packages/worker-transcription && pnpm build
 
 # Prune dev dependencies
-RUN npm prune --omit=dev
+RUN pnpm prune --prod
 
 FROM node:22-slim AS runtime
 WORKDIR /app

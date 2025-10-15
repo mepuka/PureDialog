@@ -191,16 +191,17 @@ const envVars = (vars: Record<string, pulumi.Input<string>>) =>
 const projectId = configuration.project
 
 // Shared storage bucket (retained from previous architecture)
-const bucketSuffix = new random.RandomString("sharedArtifactsBucketSuffix", {
-  length: 6,
-  special: false,
-  upper: false
-})
-
-export const sharedArtifactsBucket = new gcp.storage.Bucket(
-  "sharedArtifactsBucket",
-  {
-    name: pulumi.interpolate`${configuration.storage.bucketBaseName}-${bucketSuffix.result}`,
+const providedBucket = storageConfig.get("bucketName")
+export const sharedArtifactsBucket = providedBucket
+  ? gcp.storage.getBucketOutput({ name: providedBucket })
+  : new gcp.storage.Bucket("sharedArtifactsBucket", {
+    name: pulumi.interpolate`${configuration.storage.bucketBaseName}-${
+      new random.RandomString("sharedArtifactsBucketSuffix", {
+        length: 6,
+        special: false,
+        upper: false
+      }).result
+    }`,
     location: configuration.region,
     uniformBucketLevelAccess: true,
     forceDestroy: false,
@@ -208,8 +209,7 @@ export const sharedArtifactsBucket = new gcp.storage.Bucket(
       environment: stackMetadata.stack,
       managed_by: "pulumi"
     }
-  }
-)
+  })
 
 export const eventsTopic = new gcp.pubsub.Topic("eventsTopic", {
   name: configuration.pubsub.eventsTopic

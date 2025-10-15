@@ -47,19 +47,87 @@ export const JobRepositoryLayer = EffectLayer.effect(
     const config = yield* Config.CloudStorageConfig
     const bucket = config.bucket
 
+    const isPreconditionFailed = (error: unknown) =>
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: number }).code === 412
+
     const createJob = (
       job: Jobs.QueuedJob
     ): Effect.Effect<Jobs.QueuedJob, RepositoryError> =>
       Effect.gen(function*() {
         const status = Jobs.getJobStatus(job)
         const path = Index.jobPath(status, job.id)
-        yield* storage.putObject(bucket, path, job)
 
         if (job.idempotencyKey) {
           const idempotencyKey = idempotencyKeyFromString(job.idempotencyKey)
           const hashedKey = yield* hashIdempotencyKey(idempotencyKey)
           const idempotencyPath = Index.idempotency(hashedKey)
-          yield* storage.putObject(bucket, idempotencyPath, { jobId: job.id })
+
+          const idempotencyWriteResult = yield* storage.putObject(
+            bucket,
+            idempotencyPath,
+            { jobId: job.id },
+            { ifGenerationMatch: 0 }
+          ).pipe(
+            Effect.map(() => "created" as const),
+            Effect.catchAll((error) =>
+              isPreconditionFailed(error) ?
+                Effect.succeed<"created" | "existing">("existing") :
+                Effect.fail(error)
+            )
+          )
+
+          if (idempotencyWriteResult === "existing") {
+            const existingRecord = yield* storage.getObject(
+              bucket,
+              idempotencyPath,
+              Schema.Struct({ jobId: Core.JobId })
+            )
+
+            if (Option.isSome(existingRecord)) {
+              const existingJob = yield* findJobById(existingRecord.value.jobId)
+              if (Option.isSome(existingJob) && existingJob.value._tag === "QueuedJob") {
+                return existingJob.value
+              }
+            }
+
+            return yield* Effect.fail(
+              new RepositoryError({
+                operation: "save",
+                message: "Job already exists for idempotency key but could not be loaded"
+              })
+            )
+          }
+        }
+
+        const writeJobResult = yield* storage.putObject(
+          bucket,
+          path,
+          job,
+          { ifGenerationMatch: 0 }
+        ).pipe(
+          Effect.map(() => "created" as const),
+          Effect.catchAll((error) =>
+            isPreconditionFailed(error) ?
+              Effect.succeed<"created" | "existing">("existing") :
+              Effect.fail(error)
+          )
+        )
+
+        if (writeJobResult === "existing") {
+          const existingJob = yield* findJobById(job.id)
+          if (Option.isSome(existingJob) && existingJob.value._tag === "QueuedJob") {
+            return existingJob.value
+          }
+
+          return yield* Effect.fail(
+            new RepositoryError({
+              operation: "save",
+              message: `Job already exists: ${job.id}`
+            })
+          )
         }
 
         // Write JobQueued domain event to event store

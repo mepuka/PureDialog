@@ -65,6 +65,12 @@ const processEvent = (event: Workers.Http.WorkerCloudEventRequest) =>
     const [, , status, , rawJobId] = path
     const jobId = Schema.decodeUnknownSync(Core.JobId)(rawJobId)
 
+    yield* Effect.logInfo("metadata-worker: received event", {
+      jobId,
+      status,
+      eventId: event.id
+    })
+
     if (status !== "Queued") {
       return toWorkerResponse(jobId, "skipped", `Job already in ${status} state`)
     }
@@ -98,6 +104,12 @@ const processEvent = (event: Workers.Http.WorkerCloudEventRequest) =>
     yield* storage.putObject(config.bucket, Index.event(processingJob.id, eventId), statusChanged)
 
     const elapsed = Date.now() - start
+
+    yield* Effect.logInfo("metadata-worker: promoted job", {
+      jobId: processingJob.id,
+      processingTimeMs: elapsed
+    })
+
     return toWorkerResponse(
       processingJob.id,
       "processed",
@@ -105,23 +117,24 @@ const processEvent = (event: Workers.Http.WorkerCloudEventRequest) =>
       elapsed
     )
   }).pipe(
-    Effect.catchAll((error) => {
-      if (error instanceof UnsupportedMediaTypeError) {
-        return Effect.succeed(
-          toWorkerError(undefined, `Unsupported media type: ${error.mediaType}`, false, error)
-        )
-      }
+    Effect.catchAll((error) =>
+      Effect.gen(function*() {
+        yield* Effect.logError("metadata-worker: failed to process event", {
+          error,
+          eventId: event.id
+        })
 
-      if (error instanceof YoutubeApiError) {
-        return Effect.succeed(
-          toWorkerError(undefined, error.message, true, error.cause)
-        )
-      }
+        if (error instanceof UnsupportedMediaTypeError) {
+          return toWorkerError(undefined, `Unsupported media type: ${error.mediaType}`, false, error)
+        }
 
-      return Effect.succeed(
-        toWorkerError(undefined, error instanceof Error ? error.message : "Unknown error", true)
-      )
-    })
+        if (error instanceof YoutubeApiError) {
+          return toWorkerError(undefined, error.message, true, error.cause)
+        }
+
+        return toWorkerError(undefined, error instanceof Error ? error.message : "Unknown error", true)
+      })
+    )
   )
 
 export const eventRoutes = HttpApiBuilder.group(

@@ -1,4 +1,4 @@
-import { NodeRuntime } from "@effect/platform-node"
+import { Effect } from "effect"
 import { main } from "./server.js"
 
-main.pipe(NodeRuntime.runMain)
+Effect.runPromise(Effect.asVoid(main))

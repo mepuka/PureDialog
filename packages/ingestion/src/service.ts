@@ -4,6 +4,10 @@ import { CloudStorageConfig, CloudStorageConfigLayer } from "./Config.js"
 import { CloudStorageError } from "./errors.js"
 import type { Error } from "./index.js"
 
+export interface CloudStoragePutOptions {
+  readonly ifGenerationMatch?: number
+}
+
 /**
  * Service tag for Cloud Storage
  */
@@ -13,7 +17,8 @@ export class CloudStorageService extends Context.Tag("CloudStorageService")<
     readonly putObject: (
       bucket: string,
       key: string,
-      data: unknown
+      data: unknown,
+      options?: CloudStoragePutOptions
     ) => Effect.Effect<void, Error.CloudStorageError>
 
     readonly getObject: <T extends Schema.Schema.AnyNoContext>(
@@ -52,20 +57,15 @@ export const CloudStorageLayer = Layer.effect(
     })
 
     return {
-      putObject: (bucket, key, data) =>
+      putObject: (bucket, key, data, options) =>
         Effect.tryPromise({
           try: async () => {
             const file = storage.bucket(bucket).file(key)
-            const stream = file.createWriteStream({
-              metadata: {
-                contentType: "application/json"
-              }
-            })
-
-            await new Promise<void>((resolve, reject) => {
-              stream.on("error", reject)
-              stream.on("finish", resolve)
-              stream.end(JSON.stringify(data, null, 2))
+            await file.save(JSON.stringify(data, null, 2), {
+              contentType: "application/json",
+              ...(options?.ifGenerationMatch !== undefined
+                ? { ifGenerationMatch: options.ifGenerationMatch }
+                : {})
             })
           },
           catch: (cause) => CloudStorageError.putObjectFailed(bucket, key, cause)

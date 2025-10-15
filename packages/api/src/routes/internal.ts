@@ -1,9 +1,9 @@
-import { HttpApiBuilder, HttpApiError, KeyValueStore } from "@effect/platform"
+import { HttpApiBuilder, HttpApiError } from "@effect/platform"
 import type { CloudEvents } from "@puredialog/domain"
 import { Jobs } from "@puredialog/domain"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
 import { GcsJobFinalizedEvent, Index } from "@puredialog/storage"
-import { Effect, Layer, Match, Schema } from "effect"
+import { Effect, Layer, Match, Option, Schema } from "effect"
 import { pureDialogApi } from "../http/api.js"
 import { InternalNotificationResponse } from "../http/schemas.js"
 
@@ -25,31 +25,22 @@ type EventProcessingResult = Schema.Schema.Type<typeof EventProcessingResult>
  * Store a job event in both GCS (immutable log) and KV store (quick access)
  */
 const storeJobEvent = (
-  event: CloudEvents.Gcs.GcsObjectFinalizedEvent,
+  jobEvent: ReturnType<typeof GcsJobFinalizedEvent>,
   domainEvent: Jobs.JobStatusChanged
 ) =>
   Effect.gen(function*() {
     const storage = yield* IngestionLayer.CloudStorageService
     const config = yield* Config.CloudStorageConfig
-    const kv = yield* KeyValueStore.KeyValueStore
 
-    const jobEvent = GcsJobFinalizedEvent(event)
-
-    // Store in GCS for immutable event log
     const eventPath = Index.event(jobEvent.jobId, jobEvent.eventId)
 
     yield* storage.putObject(config.bucket, eventPath, domainEvent)
-
-    // Store in KV for quick access (key: jobId, value: latest event)
-    const kvStore = kv.forSchema(Jobs.JobStatusChanged)
-    yield* kvStore.set(jobEvent.jobId, domainEvent)
 
     yield* Effect.logInfo("Stored job event", {
       jobId: jobEvent.jobId,
       status: jobEvent.status,
       eventId: jobEvent.eventId,
-      gcsPath: eventPath,
-      kvKey: jobEvent.jobId
+      gcsPath: eventPath
     })
   })
 
@@ -59,20 +50,40 @@ const storeJobEvent = (
 const handleQueuedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     const jobEvent = GcsJobFinalizedEvent(event)
+    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
+
+    if (Option.isNone(jobSnapshot)) {
+      yield* Effect.logError("Queued job snapshot missing", {
+        jobId: jobEvent.jobId,
+        status: jobEvent.status
+      })
+
+      return EventProcessingResult.make({
+        eventType: "JobQueued",
+        jobId: jobEvent.jobId,
+        status: "Queued",
+        eventId: jobEvent.eventId,
+        processed: false,
+        stored: false,
+        message: "Queued job not found in storage"
+      })
+    }
+
+    const job = jobSnapshot.value
 
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: jobEvent.jobId,
-      requestId: "external-notification" as any,
+      jobId: job.id,
+      requestId: job.requestId,
       from: "Queued",
       to: "Queued",
       occurredAt: jobEvent.eventTime
     })
 
-    yield* storeJobEvent(event, domainEvent)
+    yield* storeJobEvent(jobEvent, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobQueued",
-      jobId: jobEvent.jobId,
+      jobId: job.id,
       status: "Queued",
       eventId: jobEvent.eventId,
       processed: true,
@@ -88,19 +99,40 @@ const handleProcessingJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     const jobEvent = GcsJobFinalizedEvent(event)
 
+    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
+
+    if (Option.isNone(jobSnapshot)) {
+      yield* Effect.logError("Processing job snapshot missing", {
+        jobId: jobEvent.jobId,
+        status: jobEvent.status
+      })
+
+      return EventProcessingResult.make({
+        eventType: "JobProcessing",
+        jobId: jobEvent.jobId,
+        status: "Processing",
+        eventId: jobEvent.eventId,
+        processed: false,
+        stored: false,
+        message: "Processing job not found in storage"
+      })
+    }
+
+    const job = jobSnapshot.value
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: jobEvent.jobId,
-      requestId: "external-notification" as any,
+      jobId: job.id,
+      requestId: job.requestId,
       from: "Queued",
       to: "Processing",
       occurredAt: jobEvent.eventTime
     })
 
-    yield* storeJobEvent(event, domainEvent)
+    yield* storeJobEvent(jobEvent, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobProcessing",
-      jobId: jobEvent.jobId,
+      jobId: job.id,
       status: "Processing",
       eventId: jobEvent.eventId,
       processed: true,
@@ -116,19 +148,40 @@ const handleCompletedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     const jobEvent = GcsJobFinalizedEvent(event)
 
+    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
+
+    if (Option.isNone(jobSnapshot)) {
+      yield* Effect.logError("Completed job snapshot missing", {
+        jobId: jobEvent.jobId,
+        status: jobEvent.status
+      })
+
+      return EventProcessingResult.make({
+        eventType: "JobCompleted",
+        jobId: jobEvent.jobId,
+        status: "Completed",
+        eventId: jobEvent.eventId,
+        processed: false,
+        stored: false,
+        message: "Completed job not found in storage"
+      })
+    }
+
+    const job = jobSnapshot.value
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: jobEvent.jobId,
-      requestId: "external-notification" as any,
+      jobId: job.id,
+      requestId: job.requestId,
       from: "Processing",
       to: "Completed",
       occurredAt: jobEvent.eventTime
     })
 
-    yield* storeJobEvent(event, domainEvent)
+    yield* storeJobEvent(jobEvent, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobCompleted",
-      jobId: jobEvent.jobId,
+      jobId: job.id,
       status: "Completed",
       eventId: jobEvent.eventId,
       processed: true,
@@ -144,19 +197,40 @@ const handleFailedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     const jobEvent = GcsJobFinalizedEvent(event)
 
+    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
+
+    if (Option.isNone(jobSnapshot)) {
+      yield* Effect.logError("Failed job snapshot missing", {
+        jobId: jobEvent.jobId,
+        status: jobEvent.status
+      })
+
+      return EventProcessingResult.make({
+        eventType: "JobFailed",
+        jobId: jobEvent.jobId,
+        status: "Failed",
+        eventId: jobEvent.eventId,
+        processed: false,
+        stored: false,
+        message: "Failed job not found in storage"
+      })
+    }
+
+    const job = jobSnapshot.value
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: jobEvent.jobId,
-      requestId: "external-notification" as any,
+      jobId: job.id,
+      requestId: job.requestId,
       from: "Processing",
       to: "Failed",
       occurredAt: jobEvent.eventTime
     })
 
-    yield* storeJobEvent(event, domainEvent)
+    yield* storeJobEvent(jobEvent, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobFailed",
-      jobId: jobEvent.jobId,
+      jobId: job.id,
       status: "Failed",
       eventId: jobEvent.eventId,
       processed: true,
@@ -172,19 +246,40 @@ const handleCancelledJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
   Effect.gen(function*() {
     const jobEvent = GcsJobFinalizedEvent(event)
 
+    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
+
+    if (Option.isNone(jobSnapshot)) {
+      yield* Effect.logError("Cancelled job snapshot missing", {
+        jobId: jobEvent.jobId,
+        status: jobEvent.status
+      })
+
+      return EventProcessingResult.make({
+        eventType: "JobCancelled",
+        jobId: jobEvent.jobId,
+        status: "Cancelled",
+        eventId: jobEvent.eventId,
+        processed: false,
+        stored: false,
+        message: "Cancelled job not found in storage"
+      })
+    }
+
+    const job = jobSnapshot.value
+
     const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: jobEvent.jobId,
-      requestId: "external-notification" as any,
+      jobId: job.id,
+      requestId: job.requestId,
       from: "Processing",
       to: "Cancelled",
       occurredAt: jobEvent.eventTime
     })
 
-    yield* storeJobEvent(event, domainEvent)
+    yield* storeJobEvent(jobEvent, domainEvent)
 
     return EventProcessingResult.make({
       eventType: "JobCancelled",
-      jobId: jobEvent.jobId,
+      jobId: job.id,
       status: "Cancelled",
       eventId: jobEvent.eventId,
       processed: true,
@@ -262,6 +357,38 @@ export const internalRoutes = HttpApiBuilder.group(
       ))
 ).pipe(
   Layer.provide(
-    Layer.mergeAll(IngestionLayer.CloudStorageLayer, Config.CloudStorageConfigLayer, KeyValueStore.layerMemory)
+    Layer.mergeAll(IngestionLayer.CloudStorageLayer, Config.CloudStorageConfigLayer)
   )
 )
+const jobSchemaForStatus = (status: Jobs.JobStatus) => {
+  switch (status) {
+    case "Queued":
+      return Jobs.QueuedJob
+    case "MetadataReady":
+      return Jobs.MetadataReadyJob
+    case "Processing":
+      return Jobs.ProcessingJob
+    case "Completed":
+      return Jobs.CompletedJob
+    case "Failed":
+      return Jobs.FailedJob
+    case "Cancelled":
+      return Jobs.CancelledJob
+  }
+}
+
+const loadJobSnapshot = (
+  jobEvent: ReturnType<typeof GcsJobFinalizedEvent>
+) =>
+  Effect.gen(function*() {
+    const storage = yield* IngestionLayer.CloudStorageService
+    const config = yield* Config.CloudStorageConfig
+    const schema = jobSchemaForStatus(jobEvent.status)
+
+    if (!schema) {
+      return Option.none()
+    }
+
+    const jobPath = Index.jobPath(jobEvent.status, jobEvent.jobId)
+    return yield* storage.getObject(config.bucket, jobPath, schema)
+  })

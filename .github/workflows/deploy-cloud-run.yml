@@ -11,13 +11,8 @@ permissions:
   id-token: write
 
 env:
-  # Core configuration - easy to adjust
   REGION: us-west1
   REPOSITORY: puredialog
-  PULUMI_STACK: mepuka/dev
-  NODE_VERSION: 22
-  PNPM_VERSION: 9
-  YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
 jobs:
   deploy:
@@ -27,17 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
-          pnpm --version
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -51,85 +35,65 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Verify setup
-        run: |
-          echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
-          echo "Region: ${REGION}"
-          echo "Repository: ${REPOSITORY}"
-          echo "Commit SHA: ${{ github.sha }}"
-          gcloud config list
-          gcloud artifacts repositories describe ${REPOSITORY} \
-            --location=${REGION} || echo "Repository might not exist yet"
-
       - name: Build and push container images
         run: |
           set -euo pipefail
 
-          echo "Images to build:"
-          echo "  - api:${{ github.sha }}"
-          echo "  - worker-metadata:${{ github.sha }}"
-          echo "  - worker-transcription:${{ github.sha }}"
+          echo "Building images with commit SHA: ${{ github.sha }}"
 
           gcloud builds submit \
             --config=cloudbuild.yaml \
             --substitutions=_REGION=${REGION},_REPOSITORY=${REPOSITORY},COMMIT_SHA=${{ github.sha }} \
             --project=${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Install Pulumi dependencies
-        working-directory: packages/infra
+      - name: Deploy API to Cloud Run
         run: |
-          pnpm install --frozen-lockfile
+          gcloud run deploy puredialog-api \
+            --image ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/api:${{ github.sha }} \
+            --platform managed \
+            --region ${REGION} \
+            --allow-unauthenticated \
+            --set-env-vars "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" \
+            --set-env-vars "GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 10 \
+            --project=${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Configure Pulumi stack
-        working-directory: packages/infra
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_TAG: ${{ github.sha }}
-          YOUTUBE_API_KEY: ${{ env.YOUTUBE_API_KEY }}
+      - name: Deploy Metadata Worker to Cloud Run
         run: |
-          pulumi login
+          gcloud run deploy puredialog-worker-metadata \
+            --image ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/worker-metadata:${{ github.sha }} \
+            --platform managed \
+            --region ${REGION} \
+            --no-allow-unauthenticated \
+            --set-env-vars "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" \
+            --set-env-vars "GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
+            --memory 1Gi \
+            --cpu 1 \
+            --max-instances 5 \
+            --project=${{ secrets.GCP_PROJECT_ID }}
 
-          pulumi stack select ${PULUMI_STACK} --non-interactive || {
-            echo "Failed to select stack ${PULUMI_STACK}"
-            echo "Available stacks:"
-            pulumi stack ls
-            exit 1
-          }
-
-          pulumi config set cloudrun:apiImage \
-            ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/api:${IMAGE_TAG} \
-            --stack ${PULUMI_STACK}
-
-          pulumi config set cloudrun:metadataImage \
-            ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/worker-metadata:${IMAGE_TAG} \
-            --stack ${PULUMI_STACK}
-
-          pulumi config set cloudrun:transcriptionImage \
-            ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/worker-transcription:${IMAGE_TAG} \
-            --stack ${PULUMI_STACK}
-
-          pulumi config set --secret env:youtubeApiKey "${YOUTUBE_API_KEY}" --stack ${PULUMI_STACK}
-
-      - name: Deploy infrastructure
-        uses: pulumi/actions@v5
-        with:
-          work-dir: packages/infra
-          stack-name: ${{ env.PULUMI_STACK }}
-          command: up
-          args: --yes --non-interactive
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+      - name: Deploy Transcription Worker to Cloud Run
+        run: |
+          gcloud run deploy puredialog-worker-transcription \
+            --image ${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${REPOSITORY}/worker-transcription:${{ github.sha }} \
+            --platform managed \
+            --region ${REGION} \
+            --no-allow-unauthenticated \
+            --set-env-vars "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" \
+            --set-env-vars "GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
+            --memory 2Gi \
+            --cpu 2 \
+            --max-instances 3 \
+            --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Show deployment results
         if: success()
-        working-directory: packages/infra
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
         run: |
-          echo "Deployment successful"
-          echo "Stack outputs:"
-          pulumi stack output --json | jq '.'
+          echo "✅ Deployment successful"
           echo ""
           echo "Service URLs:"
-          pulumi stack output --json | jq -r 'to_entries[] | select(.key | contains("url")) | "\(.key): \(.value)"'
+          gcloud run services describe puredialog-api --region ${REGION} --format 'value(status.url)' --project=${{ secrets.GCP_PROJECT_ID }}
+          echo ""
+          echo "Deployed image tags: ${{ github.sha }}"

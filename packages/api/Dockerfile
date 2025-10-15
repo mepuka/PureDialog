@@ -5,7 +5,7 @@ WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
-RUN npm install -g pnpm@9
+RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.build.json ./
 COPY packages ./packages

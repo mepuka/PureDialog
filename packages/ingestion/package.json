@@ -23,7 +23,10 @@
     "@effect/platform-node": "latest",
     "@google-cloud/storage": "^7.7.0",
     "@puredialog/domain": "workspace:^",
-    "effect": "latest",
+    "effect": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
     "typescript": "~5.8.3"
   }
 }

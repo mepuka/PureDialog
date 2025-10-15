@@ -100,7 +100,7 @@ export const CloudStorageLayer = Layer.effect(
         Effect.tryPromise({
           try: async () => {
             const [files] = await storage.bucket(bucket).getFiles({ prefix })
-            return files.map((file) => file.name) as ReadonlyArray<string>
+            return files.map((file: { name: string }) => file.name) as ReadonlyArray<string>
           },
           catch: (cause) => CloudStorageError.listObjectsFailed(bucket, cause)
         }),

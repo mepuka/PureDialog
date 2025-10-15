@@ -13,13 +13,17 @@ COPY packages ./packages
 # Install all dependencies first (including workspace dependencies)
 RUN pnpm install --frozen-lockfile
 
+# Clean any stale build artifacts
+RUN find . -name '.tsbuildinfo' -type d -exec rm -rf {} + 2>/dev/null || true
+RUN find . -name 'build' -type d -exec rm -rf {} + 2>/dev/null || true
+
 # Build workspace dependencies first
-RUN pnpm --filter @puredialog/domain build || true
-RUN pnpm --filter @puredialog/ingestion build || true
-RUN pnpm --filter @puredialog/storage build || true
+RUN pnpm --filter @puredialog/domain run clean && pnpm --filter @puredialog/domain build
+RUN pnpm --filter @puredialog/ingestion run clean && pnpm --filter @puredialog/ingestion build
+RUN pnpm --filter @puredialog/storage run clean && pnpm --filter @puredialog/storage build
 
 # Now build the API
-RUN pnpm --filter @puredialog/api build
+RUN pnpm --filter @puredialog/api run clean && pnpm --filter @puredialog/api build
 
 # Prune dev dependencies
 RUN CI=1 pnpm prune --prod

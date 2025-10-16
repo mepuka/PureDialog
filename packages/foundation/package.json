@@ -1,0 +1,29 @@
+{
+  "name": "@puredialog/foundation",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "effect": "^3.18.4"
+  },
+  "devDependencies": {
+    "@effect/vitest": "^0.26.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

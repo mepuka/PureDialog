@@ -1,11 +1,10 @@
 import { HttpApiBuilder } from "@effect/platform"
-import { CloudEvents, Core, Jobs, Workers } from "@puredialog/domain"
+import { CloudEvents, Core, Jobs, Workers, YouTube } from "@puredialog/domain"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
 import { Index, JobPathParser } from "@puredialog/storage"
 import { Effect, Option, Schema } from "effect"
 import { MetadataWorkerApi } from "../http/api.js"
 import { enrichQueuedJob, UnsupportedMediaTypeError } from "../services/enrichment.js"
-import { YoutubeApiError } from "../services/youtube.js"
 
 const toWorkerResponse = (
   jobId: Core.JobId,
@@ -128,8 +127,12 @@ const processEvent = (event: Workers.Http.WorkerCloudEventRequest) =>
           return toWorkerError(undefined, `Unsupported media type: ${error.mediaType}`, false, error)
         }
 
-        if (error instanceof YoutubeApiError) {
+        if (error instanceof YouTube.YouTubeApiError) {
           return toWorkerError(undefined, error.message, true, error.cause)
+        }
+
+        if (error instanceof YouTube.YouTubeVideoNotFoundError) {
+          return toWorkerError(undefined, `YouTube video not found: ${error.videoId}`, false, error)
         }
 
         return toWorkerError(undefined, error instanceof Error ? error.message : "Unknown error", true)

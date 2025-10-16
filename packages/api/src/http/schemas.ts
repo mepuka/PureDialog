@@ -1,4 +1,4 @@
-import { Core, Media, Transcription } from "@puredialog/domain"
+import { Core, Transcription } from "@puredialog/domain"
 import { Schema } from "effect"
 
 /**
@@ -11,10 +11,11 @@ export type HealthStatus = Schema.Schema.Type<typeof HealthStatus>
 
 /**
  * Request schema for creating a new transcription job.
- * This is the only non-Google event derived type in the API.
+ * Accepts a YouTube URL and fetches metadata server-side.
+ * This is a BREAKING CHANGE - the API now accepts URLs instead of full media objects.
  */
 export const CreateJobRequest = Schema.Struct({
-  media: Media.MediaResource,
+  youtubeUrl: Schema.String,
   idempotencyKey: Schema.optional(Schema.String),
   transcriptionContext: Schema.optional(Transcription.TranscriptionContext)
 })

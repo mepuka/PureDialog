@@ -16,6 +16,17 @@ build.tsbuildinfo
 
 /packages/**/build/**
 /packages/**/dist/**
+
+# TypeScript build artifacts in source directories (should not be created)
+/packages/**/src/**/*.d.ts
+/packages/**/src/**/*.d.ts.map
+/packages/**/src/**/*.js.map
+/packages/**/test/**/*.d.ts
+/packages/**/test/**/*.d.ts.map
+/packages/**/test/**/*.js.map
+/packages/**/scripts/**/*.d.ts
+/packages/**/scripts/**/*.d.ts.map
+/packages/**/scripts/**/*.js.map
 # Environment variables
 .env
 .env.local

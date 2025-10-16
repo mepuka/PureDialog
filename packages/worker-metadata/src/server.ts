@@ -1,13 +1,12 @@
 import { HttpApiBuilder, HttpApiSwagger, HttpServer } from "@effect/platform"
 import { NodeHttpServer } from "@effect/platform-node"
+import { YouTube } from "@puredialog/domain"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
 import { Layer } from "effect"
 import { createServer } from "node:http"
-import { MetadataWorkerConfigLayer } from "./config.js"
 import { MetadataWorkerApi } from "./http/api.js"
 import { eventRoutes } from "./routes/events.js"
 import { healthRoutes } from "./routes/health.js"
-import { YoutubeClientLive } from "./services/youtube.js"
 
 const RoutesLive = Layer.mergeAll(healthRoutes, eventRoutes)
 
@@ -16,12 +15,11 @@ const ApiLive = HttpApiBuilder.api(MetadataWorkerApi).pipe(Layer.provide(RoutesL
 const port = Number(process.env.PORT) || 8080
 
 const RuntimeLayer = Layer.mergeAll(
-  MetadataWorkerConfigLayer,
-  YoutubeClientLive,
+  YouTube.YouTubeClientLive.pipe(Layer.provide(YouTube.YouTubeConfigLive)),
   Config.CloudStorageConfigLayer,
   IngestionLayer.CloudStorageLayer,
   NodeHttpServer.layer(createServer, { port })
-).pipe(Layer.provideMerge(MetadataWorkerConfigLayer))
+)
 
 const ServerLayer = HttpApiBuilder.serve().pipe(
   Layer.provide(HttpApiSwagger.layer({ path: "/docs" })),

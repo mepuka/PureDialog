@@ -1,8 +1,7 @@
 import { assert, describe, it } from "@effect/vitest"
 import { Core, Jobs, Media, YouTube } from "@puredialog/domain"
-import { Effect, Layer, Schema } from "effect"
+import { DateTime, Effect, Layer, Schema } from "effect"
 import { enrichQueuedJob } from "../src/services/enrichment.js"
-import { YoutubeClient } from "../src/services/youtube.js"
 
 const makeQueuedJob = () => {
   const now = new Date()
@@ -33,17 +32,36 @@ const makeQueuedJob = () => {
   })
 }
 
-const youtubeClientLayer = Layer.succeed(YoutubeClient, {
+const youtubeClientLayer = Layer.succeed(YouTube.YouTubeClient, {
   fetchVideo: () =>
     Effect.succeed({
       id: YouTube.YouTubeVideoId.make("dQw4w9WgXcQ"),
       title: "Fetched Video",
       description: "Fetched description",
-      publishedAt: new Date("2024-01-01T00:00:00Z"),
+      publishedAt: DateTime.unsafeMake("2024-01-01T00:00:00Z"),
       channelId: YouTube.YouTubeChannelId.make("UC1234567890123456789012"),
       channelTitle: "Fetched Channel",
-      tags: ["test"],
-      durationSeconds: 90
+      thumbnails: [],
+      duration: 90,
+      viewCount: 1000,
+      likeCount: 100,
+      commentCount: 10,
+      tags: ["test"]
+    }),
+  fetchVideoByUrl: () =>
+    Effect.succeed({
+      id: YouTube.YouTubeVideoId.make("dQw4w9WgXcQ"),
+      title: "Fetched Video",
+      description: "Fetched description",
+      publishedAt: DateTime.unsafeMake("2024-01-01T00:00:00Z"),
+      channelId: YouTube.YouTubeChannelId.make("UC1234567890123456789012"),
+      channelTitle: "Fetched Channel",
+      thumbnails: [],
+      duration: 90,
+      viewCount: 1000,
+      likeCount: 100,
+      commentCount: 10,
+      tags: ["test"]
     })
 })
 

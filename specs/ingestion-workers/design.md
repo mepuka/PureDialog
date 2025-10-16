@@ -144,7 +144,7 @@ const processCloudEvent = (event: WorkerCloudEventRequest) =>
 export const processMetadataJob = (job: Jobs.TranscriptionJob) =>
   Effect.gen(function*() {
     const storage = yield* CloudStorageService
-    const youtubeClient = yield* YoutubeApiClient
+    const youtubeClient = yield* YouTube.YouTubeClient
     const config = yield* Config
     
     // 1. Validate job is in expected state

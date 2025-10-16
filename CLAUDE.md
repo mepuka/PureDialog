@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Package Management
 
-**Important**: Use pnpm for package management, not bun install.
+**Important**: Use pnpm for package management, 
 
 - `pnpm install` - Install dependencies
 - `pnpm add <package>` - Add new dependency
@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm start` - Run the application in production mode
 - `pnpm build` - Build the project for production (outputs to ./dist)
 
-**IMPORTANT**: Never run `pnpm dev` during development work. The development server should only be started by the user manually when they want to test the application. Use tests instead of running the dev server.
+**IMPORTANT**: Never run `pnpm dev` during development work. The development server should only be started by the user manually when they want to test the application. Use tests instead of running the dev server. Never run tsc without a no emit within source directories. 
 
 ### Code Quality
 
@@ -44,15 +44,14 @@ This is non-negotiable and applies to every single file modification.
 
 ### Runtime vs Package Management
 
-- **Runtime**: Bun (executes the JavaScript/TypeScript code)
+- **Runtime**: Node.js (executes the JavaScript/TypeScript code)
 - **Package Manager**: pnpm (manages dependencies and runs scripts)
-- **Build Tool**: Bun (for building the final application)
 
 ## Project Architecture
 
 ### Technology Stack
 
-- **Runtime**: Bun (not Node.js)
+- **Runtime**: Node.js
 - **Language**: TypeScript with ES2022 target
 - **Module System**: ESNext with bundler module resolution
 - **Effect Ecosystem**: Uses Effect TypeScript library with language service plugin
@@ -69,9 +68,8 @@ This is non-negotiable and applies to every single file modification.
 ### TypeScript Configuration
 
 - Strict mode enabled with bundler module resolution
-- Allows importing .ts extensions (Bun runtime feature)
+- Allows importing .ts without runtime feature)
 - Effect language service plugin enabled for enhanced TypeScript support
-- No emit configuration (build handled by Bun runtime)
 - Incremental compilation with build info caching for faster type checking
 - Path aliases configured: `http-api-todos/*` maps to `./src/*`
 

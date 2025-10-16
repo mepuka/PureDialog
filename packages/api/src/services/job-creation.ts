@@ -1,19 +1,27 @@
-import type { Core } from "@puredialog/domain"
+import type { Core, Media, Transcription } from "@puredialog/domain"
 import { Jobs } from "@puredialog/domain"
 import { generateIdempotencyKey, idempotencyKeyToString } from "@puredialog/storage"
 import { Effect } from "effect"
 import { randomUUID } from "node:crypto"
-import type { CreateJobRequest } from "../http/schemas.js"
 
 export const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
 export const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
 
 /**
- * Create a new QueuedJob from an API request.
+ * Internal job creation payload with MediaResource
+ */
+export interface JobCreationPayload {
+  readonly media: Media.MediaResource
+  readonly idempotencyKey?: string | undefined
+  readonly transcriptionContext?: Transcription.TranscriptionContext | undefined
+}
+
+/**
+ * Create a new QueuedJob from a job creation payload.
  * Uses proper Schema constructors for type safety.
  */
 export const createTranscriptionJob = (
-  payload: CreateJobRequest
+  payload: JobCreationPayload
 ): Effect.Effect<Jobs.QueuedJob> =>
   Effect.sync(() => {
     const jobId = generateJobId()

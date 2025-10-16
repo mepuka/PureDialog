@@ -10,7 +10,7 @@
 - Extract `jobId` and `status` from CloudEvent `subject` field (`objects/jobs/Queued/{jobId}.json`)
 - Enforce idempotency: validate job is still in `Queued` state; skip processing if already advanced
 - Fetch external metadata:
-  - `media.type === "youtube"`: resolve via `YoutubeApiClient.getVideo` + `getChannel`
+  - `media.type === "youtube"`: resolve via `YouTube.YouTubeClient` from `@puredialog/domain` (domain layer service)
   - Prepare hooks for future media types with a dispatcher function
 - Enrich job with metadata (title, description, duration, tags, speaker hints)
 - **Atomic state transition**: Write enriched job to `jobs/Processing/{jobId}.json`, then delete from `jobs/Queued/{jobId}.json`
@@ -56,7 +56,7 @@
 
 3. **Enrichment Pipeline**
    - Dispatch by `job.media.type`. For YouTube:
-     - Fetch video + channel documents via `YoutubeApiClient`.
+     - Fetch video metadata via `YouTube.YouTubeClient` from `@puredialog/domain` (domain layer service).
      - Derive structured metadata (duration seconds, channel author info, categories, publishedAt, keywords).
      - Compute speaker hints (`SpeakerRoleRegistry.resolve(job.requestId, channelId)` where available).
      - Populate `metadataSnapshot` structure defined in domain package (create schema if missing).
@@ -92,7 +92,7 @@
 - Provide layers:
   - `PubSubClientLive` (work + event publishers, DLQ publisher).
   - `ProcessingJobStoreLive` (backed by Postgres/Firestore once available, stub storage for now).
-  - `YoutubeApiClientLive`, `SpeakerRoleRegistryLive`.
+  - `YouTube.YouTubeClientLive` from `@puredialog/domain`, `SpeakerRoleRegistryLive`.
   - `Logger`, `Tracer`, `Metrics` (shared platform layers).
 
 ## Observability

@@ -9,6 +9,7 @@ const Health = HttpApiGroup.make("health").add(
 const createJob = HttpApiEndpoint.post("createJob", "/jobs")
   .setPayload(CreateJobRequest)
   .addSuccess(JobAccepted, { status: 202 })
+  .addError(HttpApiError.BadRequest)
   .addError(HttpApiError.Conflict)
   .addError(HttpApiError.InternalServerError)
   .addError(HttpApiError.HttpApiDecodeError)

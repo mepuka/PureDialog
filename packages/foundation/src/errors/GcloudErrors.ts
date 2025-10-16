@@ -25,3 +25,11 @@ export class InvalidGcloudOutputDefect extends Schema.TaggedError<InvalidGcloudO
   command: Schema.String,
   output: Schema.String
 }) {}
+
+/**
+ * Error when user is not authenticated with gcloud
+ * Recoverable via `gcloud auth login`
+ */
+export class NotAuthenticatedError extends Schema.TaggedError<NotAuthenticatedError>()("NotAuthenticatedError", {
+  message: Schema.String
+}) {}

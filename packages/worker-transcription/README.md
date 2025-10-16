@@ -1,1 +1,0 @@
-Worker transcription package for Pure Dialog

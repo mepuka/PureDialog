@@ -27,7 +27,6 @@ export default [
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended"
   ),
-  ...effectEslint.configs.dprint,
   {
     plugins: {
       import: fixupPluginRules(_import),
@@ -105,17 +104,6 @@ export default [
       "@typescript-eslint/no-use-before-define": "off",
       "@typescript-eslint/no-namespace": "off",
 
-      "@effect/dprint": ["error", {
-        config: {
-          indentWidth: 2,
-          lineWidth: 120,
-          semiColons: "asi",
-          quoteStyle: "alwaysDouble",
-          trailingCommas: "never",
-          operatorPosition: "maintain",
-          "arrowFunction.useParentheses": "force"
-        }
-      }]
     }
   }
 ]

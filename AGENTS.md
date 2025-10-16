@@ -1,5 +1,7 @@
 # Agent Instructions for Effect Library Development
 
+> Read this first: This repository uses three lifecycle agents for Effect development. Always choose the right agent, follow the shared research protocol, and explicitly read the agent files for guidance before acting.
+
 ## 🚨 HIGHEST PRIORITY RULES 🚨
 
 ### ABSOLUTELY FORBIDDEN: try-catch in Effect.gen
@@ -87,6 +89,79 @@
   });
   ```
 - **CRITICAL**: Always use `return yield*` to make termination explicit and avoid unreachable code
+
+## Lifecycle Agents Overview (Architect → Engineer → Tester)
+
+Use the agents as a workflow across the development lifecycle. Each agent has its own detailed guidance in `.claude/agents/`. Always open and read the relevant agent file before you start.
+
+- effect-architect
+  - Purpose: Design services, define boundaries, establish dependency graphs
+  - File: `.claude/agents/effect-architect.md`
+  - Handoff: Provides service contracts, layer signatures, schemas, and dependency graph
+
+- effect-engineer
+  - Purpose: Implement Effect code (errors, concurrency, streams, resources, layers) and resolve type issues
+  - File: `.claude/agents/effect-engineer.md`
+  - Handoff: Provides working implementation and smoke tests to tester
+
+- effect-tester
+  - Purpose: Comprehensive testing with `@effect/vitest`, `TestClock`, mocks/test layers
+  - File: `.claude/agents/effect-tester.md`
+  - Handoff: Confirms quality; feeds back edge cases for iteration
+
+Principle: Design → Implement → Test. Do not skip phases. Follow the specific best practices in each agent file.
+
+## Unified Research Protocol (All Agents)
+
+Before implementing or changing anything, follow this protocol. Consistency with existing patterns is required.
+
+1) Codebase pattern discovery
+   - Search for existing patterns first.
+   - Services: `Context.Tag`
+   - Layers: `Layer.` usages
+   - Streams: `Stream.` usages
+   - Tests: `**/*.test.ts`, `it.effect`, `@effect/vitest`
+
+2) Effect documentation via MCP (Effect Docs)
+   - Use the Effect docs MCP tools to look up official guidance and examples.
+   - When: unfamiliar pattern/operator, choosing between options, verifying best practices
+   - Tools: `mcp__effect-docs__effect_docs_search` then `mcp__effect-docs__get_effect_doc`
+
+3) Source inspection (when type errors persist)
+   - Inspect actual types/implementations in `node_modules/effect/src/*` and `@effect/vitest` sources
+   - Files: `Effect.ts`, `Layer.ts`, `Stream.ts`, `Fiber.ts`, `Schedule.ts`, `Context.ts`, `TestClock.ts`
+
+4) Escalation
+   - Built-in knowledge → Codebase patterns → Effect docs (MCP) → Source inspection
+
+Always: Read the specific agent file for task-specific research queries and examples.
+
+## How to Pick the Right Agent
+
+- Architecture or service boundary questions → read `.claude/agents/effect-architect.md` and use Architect
+- Implementation, type errors, operator selection → read `.claude/agents/effect-engineer.md` and use Engineer
+- Testing, TestClock, mocks, coverage → read `.claude/agents/effect-tester.md` and use Tester
+
+Note: The general file `.claude/agents/effect-expert.md` can route you to the right specialist, but for actual work always use the lifecycle agent and read its file.
+
+## MCP Effect Docs Usage (All Agents)
+
+When you need official guidance or examples:
+
+```ts
+// Discover docs
+yield* mcp__effect-docs__effect_docs_search({
+  query: "Layer dependency injection service composition"
+})
+
+// Read a specific document page
+yield* mcp__effect-docs__get_effect_doc({
+  documentId: 89,
+  page: 1
+})
+```
+
+Prefer multiple focused searches over a single broad one. Cross-check with agent-specific recommendations.
 
 ## Project Overview
 
@@ -242,14 +317,7 @@ pnpm lint --fix <typescript_file.ts>
 
 ### Critical Requirements
 
-- **CRITICAL REQUIREMENT**: Check that all JSDoc examples compile: `pnpm docgen`
-- This command extracts code examples from JSDoc comments and type-checks them
-- **ZERO TOLERANCE**: Even pre-existing errors must be fixed before committing new examples
-- **NEVER remove examples to make docgen pass** - Fix the type issues properly instead
-- Examples should use correct imports and API usage
-- **IMPORTANT**: Only edit `@example` sections in the original source files (e.g., `packages/effect/src/*.ts`)
-- **DO NOT** edit files in the `docs/examples/` folder - these are auto-generated from JSDoc comments
-- **CRITICAL**: When the JSDoc analysis tool reports false positives (missing examples that actually exist), fix the tool in `scripts/analyze-jsdoc.mjs` to correctly detect existing examples
+
 
 ### Documentation Enhancement Strategies
 

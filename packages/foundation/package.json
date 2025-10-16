@@ -19,7 +19,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "effect": "^3.18.4"
+    "effect": "^3.18.4",
+    "@effect/platform": "^0.92.1",
+    "@effect/platform-node": "^0.98.3"
   },
   "devDependencies": {
     "@effect/vitest": "^0.26.0",

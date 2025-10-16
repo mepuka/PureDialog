@@ -1,5 +1,6 @@
-import { Context, Effect, Layer, ParseResult, Schema, Stream, String as EffectString } from "effect"
+import { Context, Effect, Layer, ParseResult, Schema } from "effect"
 import { Command, CommandExecutor } from "@effect/platform"
+import * as PlatformError from "@effect/platform/Error"
 import { GcloudError, GcloudNotInstalledDefect } from "../errors/index.js"
 
 /**
@@ -18,11 +19,12 @@ export class GcloudCli extends Context.Tag("@puredialog/foundation/GcloudCli")<
      * @returns Parsed and validated result
      * @throws GcloudError on command failure
      * @throws ParseError on JSON parse or schema validation failure
+     * @throws PlatformError.PlatformError on platform/system errors
      */
     readonly runJson: <A, I, R>(
       args: ReadonlyArray<string>,
       schema: Schema.Schema<A, I, R>
-    ) => Effect.Effect<A, GcloudError | ParseResult.ParseError, CommandExecutor.CommandExecutor | R>
+    ) => Effect.Effect<A, GcloudError | ParseResult.ParseError | PlatformError.PlatformError, CommandExecutor.CommandExecutor | R>
 
     /**
      * Execute a gcloud command and return raw string output
@@ -32,8 +34,9 @@ export class GcloudCli extends Context.Tag("@puredialog/foundation/GcloudCli")<
      * @param args - Command arguments (e.g., ["projects", "list"])
      * @returns Raw stdout output as string
      * @throws GcloudError on command failure
+     * @throws PlatformError.PlatformError on platform/system errors
      */
-    readonly runString: (args: ReadonlyArray<string>) => Effect.Effect<string, GcloudError, CommandExecutor.CommandExecutor>
+    readonly runString: (args: ReadonlyArray<string>) => Effect.Effect<string, GcloudError | PlatformError.PlatformError, CommandExecutor.CommandExecutor>
   }
 >() {}
 
@@ -58,51 +61,16 @@ export const GcloudCliLive = Layer.effect(
 
     // Helper to execute gcloud command and return stdout
     const executeCommand = (args: ReadonlyArray<string>) =>
-      Effect.gen(function*() {
-        const command = Command.make("gcloud", ...args)
-        const process = yield* Command.start(command)
-
-        const [exitCode, stdout, stderr] = yield* Effect.all(
-          [
-            process.exitCode,
-            Stream.runFold(
-              Stream.decodeText(process.stdout),
-              EffectString.empty,
-              EffectString.concat
-            ),
-            Stream.runFold(
-              Stream.decodeText(process.stderr),
-              EffectString.empty,
-              EffectString.concat
-            )
-          ],
-          { concurrency: 3 }
-        )
-
-        if (exitCode === 0) {
-          return stdout.trim()
-        } else {
-          return yield* Effect.fail(
-            new GcloudError({
-              message: stderr || `Command failed with exit code ${exitCode}`,
-              command: `gcloud ${args.join(" ")}`,
-              exitCode,
-              stderr
-            })
-          )
-        }
-      }).pipe(
-        Effect.scoped,
+      Command.string(Command.make("gcloud", ...args)).pipe(
         Effect.mapError((error) =>
-          error instanceof GcloudError
-            ? error
-            : new GcloudError({
-                message: error instanceof Error ? error.message : String(error),
-                command: `gcloud ${args.join(" ")}`,
-                exitCode: -1,
-                stderr: error instanceof Error ? error.message : String(error)
-              })
-        )
+          new GcloudError({
+            message: error.message || String(error),
+            command: `gcloud ${args.join(" ")}`,
+            exitCode: -1,
+            stderr: error.message || String(error)
+          })
+        ),
+        Effect.map((output) => output.trim())
       )
 
     return {
@@ -110,22 +78,12 @@ export const GcloudCliLive = Layer.effect(
         Effect.gen(function*() {
           // Append --format=json to arguments
           const jsonArgs = [...args, "--format=json"]
-          const output = yield* executeCommand(jsonArgs)
+          const output = yield* Command.string(Command.make("gcloud", ...jsonArgs)).pipe(
+            Effect.map((s) => s.trim())
+          )
 
-          // Parse JSON
-          const parsed = yield* Effect.try({
-            try: () => JSON.parse(output),
-            catch: (error) =>
-              new GcloudError({
-                message: `Failed to parse JSON output: ${error instanceof Error ? error.message : String(error)}`,
-                command: `gcloud ${jsonArgs.join(" ")}`,
-                exitCode: -1,
-                stderr: output
-              })
-          })
-
-          // Validate with schema
-          return yield* Schema.decode(schema)(parsed)
+          // Parse JSON and validate with schema in one step
+          return yield* Schema.decodeUnknown(Schema.parseJson(schema))(output)
         }),
 
       runString: executeCommand
@@ -136,7 +94,9 @@ export const GcloudCliLive = Layer.effect(
 /**
  * Test implementation - returns canned responses based on command
  */
-export const GcloudCliTest = (interactions: Map<string, string | Effect.Effect<string, GcloudError, CommandExecutor.CommandExecutor>>) =>
+export const GcloudCliTest = (
+  interactions: Map<string, string | Effect.Effect<string, GcloudError | PlatformError.PlatformError, CommandExecutor.CommandExecutor>>
+) =>
   Layer.succeed(
     GcloudCli,
     {
@@ -157,25 +117,13 @@ export const GcloudCliTest = (interactions: Map<string, string | Effect.Effect<s
           let output: string
           if (typeof response === "string") {
             yield* Effect.sleep("10 millis")
-            output = response
+            output = response.trim()
           } else {
-            output = yield* response
+            output = yield* response.pipe(Effect.map((s) => s.trim()))
           }
 
-          // Parse JSON
-          const parsed = yield* Effect.try({
-            try: () => JSON.parse(output),
-            catch: (error) =>
-              new GcloudError({
-                message: `Failed to parse JSON output: ${error instanceof Error ? error.message : String(error)}`,
-                command: `gcloud ${jsonArgs.join(" ")}`,
-                exitCode: -1,
-                stderr: output
-              })
-          })
-
-          // Validate with schema
-          return yield* Schema.decode(schema)(parsed)
+          // Parse JSON and validate with schema in one step
+          return yield* Schema.decodeUnknown(Schema.parseJson(schema))(output)
         }),
 
       runString: (args) =>
@@ -193,9 +141,9 @@ export const GcloudCliTest = (interactions: Map<string, string | Effect.Effect<s
           if (typeof response === "string") {
             // Simulate network latency
             yield* Effect.sleep("10 millis")
-            return response
+            return response.trim()
           } else {
-            return yield* response
+            return yield* response.pipe(Effect.map((s) => s.trim()))
           }
         })
     }

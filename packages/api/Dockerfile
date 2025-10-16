@@ -21,9 +21,6 @@ RUN cd packages/storage && pnpm build
 # Now build the API
 RUN cd packages/api && pnpm build
 
-# Prune dev dependencies
-RUN pnpm prune --prod
-
 FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
@@ -35,6 +32,9 @@ COPY --from=build /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Copy all workspace packages with their built outputs
 COPY --from=build /workspace/packages ./packages
+
+# Note: Skipping pnpm prune --prod because it breaks workspace symlinks
+# The slight increase in image size is acceptable for correct dependency resolution
 
 EXPOSE 8080
 CMD ["node", "--enable-source-maps", "packages/api/build/esm/index.js"]

@@ -22,9 +22,6 @@ RUN cd packages/llm && pnpm build
 # Now build the worker
 RUN cd packages/worker-metadata && pnpm build
 
-# Prune dev dependencies
-RUN pnpm prune --prod
-
 FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
@@ -36,6 +33,9 @@ COPY --from=build /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Copy all workspace packages with their built outputs
 COPY --from=build /workspace/packages ./packages
+
+# Note: Skipping pnpm prune --prod because it breaks workspace symlinks
+# The slight increase in image size is acceptable for correct dependency resolution
 
 EXPOSE 8080
 CMD ["node", "--enable-source-maps", "packages/worker-metadata/build/esm/index.js"]

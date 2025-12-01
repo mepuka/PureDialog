@@ -41,7 +41,7 @@ const createJobHandler = (payload: CreateJobRequest) =>
 
     const persisted = yield* store.createJob(job)
 
-    yield* Effect.logInfo("Job persisted to queued state", {
+    yield* Effect.logInfo("Job persisted to processing state", {
       jobId: persisted.id,
       videoId: video.id,
       videoTitle: video.title

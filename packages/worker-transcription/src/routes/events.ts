@@ -1,7 +1,7 @@
 import { HttpApiBuilder } from "@effect/platform"
 import { CloudEvents, Core, Jobs, Workers } from "@puredialog/domain"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
-import { Index, JobPathParser } from "@puredialog/storage"
+import { Index, JobPathParser, JobStore } from "@puredialog/storage"
 import { Effect, Option, Schema } from "effect"
 import { TranscriptionWorkerApi } from "../http/api.js"
 import { generateTranscript, TranscriptGenerationError, UnsupportedMediaTypeError } from "../services/transcribe.js"
@@ -74,36 +74,31 @@ const processEvent = (event: Workers.Http.WorkerCloudEventRequest) =>
       return toWorkerResponse(jobId, "skipped", `Job in ${status} state cannot be completed`)
     }
 
+    const store = yield* JobStore
     const storage = yield* IngestionLayer.CloudStorageService
     const config = yield* Config.CloudStorageConfig
 
-    const processingPath = Index.jobPath("Processing", jobId)
-    const maybeJob = yield* storage.getObject(config.bucket, processingPath, Jobs.ProcessingJob)
+    const maybeJob = yield* store.findJobById(jobId)
 
     if (Option.isNone(maybeJob)) {
-      return toWorkerResponse(jobId, "skipped", "Processing job no longer available")
+      return toWorkerResponse(jobId, "skipped", "Job no longer available")
     }
 
-    const { completedJob, transcript } = yield* generateTranscript(maybeJob.value)
+    const job = maybeJob.value
+    if (job._tag !== "ProcessingJob") {
+      return toWorkerResponse(jobId, "skipped", `Job is not in Processing state: ${job._tag}`)
+    }
 
-    const completedPath = Index.jobPath("Completed", completedJob.id)
-    yield* storage.putObject(config.bucket, completedPath, completedJob)
-    yield* storage.deleteObject(config.bucket, processingPath).pipe(
-      Effect.catchAll(() => Effect.void)
-    )
+    const { transcript } = yield* generateTranscript(job)
 
     const transcriptPath = Index.transcript(transcript.id)
     yield* storage.putObject(config.bucket, transcriptPath, transcript)
 
-    const statusEventId = `${Date.now()}_completed`
-    const statusChanged = Jobs.JobStatusChanged.make({
-      jobId: completedJob.id,
-      requestId: completedJob.requestId,
-      from: "Processing",
-      to: "Completed",
-      occurredAt: new Date()
-    })
-    yield* storage.putObject(config.bucket, Index.event(completedJob.id, statusEventId), statusChanged)
+    const completedJob = yield* store.updateJobStatus(jobId, "Completed", undefined, transcript.id)
+
+    if (completedJob._tag !== "CompletedJob") {
+      return yield* Effect.fail(new Error("Job status update failed to return CompletedJob"))
+    }
 
     const transcriptEventId = `${Date.now()}_transcript`
     const transcriptComplete = Jobs.TranscriptComplete.make({

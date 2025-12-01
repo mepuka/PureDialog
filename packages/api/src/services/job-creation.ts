@@ -3,6 +3,7 @@ import { Jobs } from "@puredialog/domain"
 import { generateIdempotencyKey, idempotencyKeyToString } from "@puredialog/storage"
 import { Effect } from "effect"
 import { randomUUID } from "node:crypto"
+import { buildMediaMetadata } from "./metadata.js"
 
 export const generateJobId = (): Core.JobId => `job_${randomUUID()}` as Core.JobId
 export const generateRequestId = (): Core.RequestId => `req_${randomUUID()}` as Core.RequestId
@@ -17,12 +18,12 @@ export interface JobCreationPayload {
 }
 
 /**
- * Create a new QueuedJob from a job creation payload.
+ * Create a new ProcessingJob from a job creation payload.
  * Uses proper Schema constructors for type safety.
  */
 export const createTranscriptionJob = (
   payload: JobCreationPayload
-): Effect.Effect<Jobs.QueuedJob> =>
+): Effect.Effect<Jobs.ProcessingJob> =>
   Effect.sync(() => {
     const jobId = generateJobId()
     const requestId = generateRequestId()
@@ -34,8 +35,14 @@ export const createTranscriptionJob = (
       idempotencyKey = idempotencyKeyToString(generateIdempotencyKey("/jobs", payload.media))
     }
 
-    // Use Schema constructor for type-safe job creation
-    return Jobs.QueuedJob.make({
+    if (payload.media.type !== "youtube") {
+      throw new Error("Unsupported media type")
+    }
+
+    const metadata = buildMediaMetadata(jobId, payload.media.data)
+
+    // Create ProcessingJob directly, skipping Queued/MetadataReady states
+    return Jobs.ProcessingJob.make({
       id: jobId,
       requestId,
       media: payload.media,
@@ -43,6 +50,9 @@ export const createTranscriptionJob = (
       createdAt: now,
       updatedAt: now,
       transcriptionContext: payload.transcriptionContext,
-      idempotencyKey
+      idempotencyKey,
+      metadata,
+      metadataFetchedAt: now,
+      processingStartedAt: now
     })
   })

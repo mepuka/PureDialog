@@ -119,7 +119,6 @@ interface StackConfig {
   readonly serviceAccountEmail: string
   readonly services: {
     readonly api: CloudRunServiceConfig
-    readonly metadataWorker: CloudRunServiceConfig
     readonly transcriptionWorker: CloudRunServiceConfig
   }
   readonly pubsub: PubSubConfig
@@ -148,15 +147,6 @@ const defaultStackConfig: StackConfig = {
       minInstances: cloudRunConfig.getNumber("apiMinInstances") ?? 0,
       maxInstances: cloudRunConfig.getNumber("apiMaxInstances") ?? 2,
       concurrency: cloudRunConfig.getNumber("apiConcurrency") ?? 80
-    },
-    metadataWorker: {
-      serviceName: cloudRunConfig.get("metadataServiceName") ?? "worker-metadata",
-      image: cloudRunConfig.require("metadataImage"),
-      cpu: cloudRunConfig.get("metadataCpu") ?? "1",
-      memory: cloudRunConfig.get("metadataMemory") ?? "512Mi",
-      minInstances: cloudRunConfig.getNumber("metadataMinInstances") ?? 0,
-      maxInstances: cloudRunConfig.getNumber("metadataMaxInstances") ?? 2,
-      concurrency: cloudRunConfig.getNumber("metadataConcurrency") ?? 10
     },
     transcriptionWorker: {
       serviceName: cloudRunConfig.get("transcriptionServiceName")
@@ -267,18 +257,6 @@ const apiService = createService(
   "INGRESS_TRAFFIC_ALL"
 )
 
-const metadataWorkerService = createService(
-  "metadataWorkerService",
-  configuration.services.metadataWorker,
-  {
-    NODE_ENV: "production",
-    GCS_PROJECT_ID: projectId,
-    GCS_BUCKET: sharedArtifactsBucket.name,
-    YOUTUBE_API_KEY: youtubeApiKey
-  },
-  "INGRESS_TRAFFIC_ALL"
-)
-
 const transcriptionWorkerService = createService(
   "transcriptionWorkerService",
   configuration.services.transcriptionWorker,
@@ -301,14 +279,6 @@ new gcp.cloudrunv2.ServiceIamMember("apiPublicInvoker", {
 })
 
 const pubsubInvokerMember = pulumi.interpolate`serviceAccount:${configuration.serviceAccountEmail}`
-
-new gcp.cloudrunv2.ServiceIamMember("metadataInvoker", {
-  project: projectId,
-  location: configuration.region,
-  name: metadataWorkerService.name,
-  role: "roles/run.invoker",
-  member: pubsubInvokerMember
-})
 
 new gcp.cloudrunv2.ServiceIamMember("transcriptionInvoker", {
   project: projectId,
@@ -364,27 +334,7 @@ export const gcsSource = new gcp.eventarc.GoogleApiSource("gcs-source", {
 
 // 3. Create Pipelines - Route events to Cloud Run services
 
-// Pipeline 1: Metadata Worker
-const metadataWorkerPipeline = new gcp.eventarc.Pipeline("metadata-worker-pipeline", {
-  location: EVENTARC_LOCATION,
-  project: projectId,
-  pipelineId: "metadata-worker",
-  displayName: "Metadata Worker Pipeline",
-  destinations: [
-    createCloudRunDestination(
-      metadataWorkerService.uri,
-      configuration.serviceAccountEmail
-    )
-  ],
-  loggingConfig: createLoggingConfig("INFO"),
-  labels: {
-    environment: stackMetadata.stack,
-    managed_by: "pulumi",
-    worker: "metadata"
-  }
-})
-
-// Pipeline 2: Transcription Worker
+// Pipeline 1: Transcription Worker
 const transcriptionWorkerPipeline = new gcp.eventarc.Pipeline("transcription-worker-pipeline", {
   location: EVENTARC_LOCATION,
   project: projectId,
@@ -428,25 +378,7 @@ const notificationsPipeline = new gcp.eventarc.Pipeline("notifications-pipeline"
 
 // 4. Create Enrollments - Filter events and route to pipelines using CEL expressions
 
-// Enrollment 1: jobs/Queued/ → Metadata Worker
-export const metadataEnrollment = new gcp.eventarc.Enrollment("metadata-enrollment", {
-  location: EVENTARC_LOCATION,
-  project: projectId,
-  enrollmentId: "metadata-worker",
-  messageBus: messageBusName,
-  destination: metadataWorkerPipeline.id,
-  displayName: "Metadata Worker Enrollment",
-
-  celMatch: buildGcsEventFilter(sharedArtifactsBucket.name, GCS_PATHS.JOBS_QUEUED),
-
-  labels: {
-    environment: stackMetadata.stack,
-    managed_by: "pulumi",
-    worker: "metadata"
-  }
-})
-
-// Enrollment 2: jobs/Processing/ → Transcription Worker
+// Enrollment 1: jobs/Processing/ → Transcription Worker
 export const transcriptionEnrollment = new gcp.eventarc.Enrollment("transcription-enrollment", {
   location: EVENTARC_LOCATION,
   project: projectId,
@@ -488,5 +420,4 @@ export const eventsMonitorSubscription = new gcp.pubsub.Subscription(
 )
 
 export const apiUrl = apiService.uri
-export const metadataWorkerUrl = metadataWorkerService.uri
 export const transcriptionWorkerUrl = transcriptionWorkerService.uri

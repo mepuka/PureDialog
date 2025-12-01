@@ -13,7 +13,6 @@
     { "path": "./packages/ingestion" },
     { "path": "./packages/llm" },
     { "path": "./packages/api" },
-    { "path": "./packages/worker-metadata" },
     { "path": "./packages/worker-transcription" },
     { "path": "./packages/infra" }
   ]

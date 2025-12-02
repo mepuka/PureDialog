@@ -7,8 +7,8 @@ import { hashIdempotencyKey, idempotencyKeyFromString } from "./utils/idempotenc
 // --- REPOSITORY INTERFACE ---
 export interface JobRepositoryInterface {
   readonly createJob: (
-    job: Jobs.QueuedJob
-  ) => Effect.Effect<Jobs.QueuedJob, RepositoryError>
+    job: Jobs.ActiveJob
+  ) => Effect.Effect<Jobs.ActiveJob, RepositoryError>
 
   readonly findJobById: (
     jobId: Core.JobId
@@ -54,8 +54,8 @@ export const JobRepositoryLayer = EffectLayer.effect(
       (error as { code?: number }).code === 412
 
     const createJob = (
-      job: Jobs.QueuedJob
-    ): Effect.Effect<Jobs.QueuedJob, RepositoryError> =>
+      job: Jobs.ActiveJob
+    ): Effect.Effect<Jobs.ActiveJob, RepositoryError> =>
       Effect.gen(function*() {
         const status = Jobs.getJobStatus(job)
         const path = Index.jobPath(status, job.id)
@@ -88,8 +88,8 @@ export const JobRepositoryLayer = EffectLayer.effect(
 
             if (Option.isSome(existingRecord)) {
               const existingJob = yield* findJobById(existingRecord.value.jobId)
-              if (Option.isSome(existingJob) && existingJob.value._tag === "QueuedJob") {
-                return existingJob.value
+              if (Option.isSome(existingJob) && Jobs.isActiveJob(existingJob.value)) {
+                return existingJob.value as Jobs.ActiveJob
               }
             }
 
@@ -118,8 +118,8 @@ export const JobRepositoryLayer = EffectLayer.effect(
 
         if (writeJobResult === "existing") {
           const existingJob = yield* findJobById(job.id)
-          if (Option.isSome(existingJob) && existingJob.value._tag === "QueuedJob") {
-            return existingJob.value
+          if (Option.isSome(existingJob) && Jobs.isActiveJob(existingJob.value)) {
+            return existingJob.value as Jobs.ActiveJob
           }
 
           return yield* Effect.fail(

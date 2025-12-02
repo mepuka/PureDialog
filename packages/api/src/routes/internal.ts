@@ -1,4 +1,4 @@
-import { HttpApiBuilder, HttpApiError } from "@effect/platform"
+import { HttpApiBuilder } from "@effect/platform"
 import type { CloudEvents } from "@puredialog/domain"
 import { Jobs } from "@puredialog/domain"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
@@ -41,103 +41,6 @@ const storeJobEvent = (
       status: jobEvent.status,
       eventId: jobEvent.eventId,
       gcsPath: eventPath
-    })
-  })
-
-/**
- * Handle a job transitioning to Queued state
- */
-const handleQueuedJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
-  Effect.gen(function*() {
-    const jobEvent = GcsJobFinalizedEvent(event)
-    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
-
-    if (Option.isNone(jobSnapshot)) {
-      yield* Effect.logError("Queued job snapshot missing", {
-        jobId: jobEvent.jobId,
-        status: jobEvent.status
-      })
-
-      return EventProcessingResult.make({
-        eventType: "JobQueued",
-        jobId: jobEvent.jobId,
-        status: "Queued",
-        eventId: jobEvent.eventId,
-        processed: false,
-        stored: false,
-        message: "Queued job not found in storage"
-      })
-    }
-
-    const job = jobSnapshot.value
-
-    const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: job.id,
-      requestId: job.requestId,
-      from: "Queued",
-      to: "Queued",
-      occurredAt: jobEvent.eventTime
-    })
-
-    yield* storeJobEvent(jobEvent, domainEvent)
-
-    return EventProcessingResult.make({
-      eventType: "JobQueued",
-      jobId: job.id,
-      status: "Queued",
-      eventId: jobEvent.eventId,
-      processed: true,
-      stored: true,
-      message: "Job queued for processing"
-    })
-  })
-
-/**
- * Handle a job transitioning to Processing state
- */
-const handleProcessingJob = (event: CloudEvents.Gcs.GcsObjectFinalizedEvent) =>
-  Effect.gen(function*() {
-    const jobEvent = GcsJobFinalizedEvent(event)
-
-    const jobSnapshot = yield* loadJobSnapshot(jobEvent)
-
-    if (Option.isNone(jobSnapshot)) {
-      yield* Effect.logError("Processing job snapshot missing", {
-        jobId: jobEvent.jobId,
-        status: jobEvent.status
-      })
-
-      return EventProcessingResult.make({
-        eventType: "JobProcessing",
-        jobId: jobEvent.jobId,
-        status: "Processing",
-        eventId: jobEvent.eventId,
-        processed: false,
-        stored: false,
-        message: "Processing job not found in storage"
-      })
-    }
-
-    const job = jobSnapshot.value
-
-    const domainEvent = Jobs.JobStatusChanged.make({
-      jobId: job.id,
-      requestId: job.requestId,
-      from: "Queued",
-      to: "Processing",
-      occurredAt: jobEvent.eventTime
-    })
-
-    yield* storeJobEvent(jobEvent, domainEvent)
-
-    return EventProcessingResult.make({
-      eventType: "JobProcessing",
-      jobId: job.id,
-      status: "Processing",
-      eventId: jobEvent.eventId,
-      processed: true,
-      stored: true,
-      message: "Job started processing"
     })
   })
 
@@ -304,18 +207,22 @@ const handleNotification = (cloudEvent: CloudEvents.Gcs.GcsObjectFinalizedEvent)
 
     // Use Match for the job status union type
     return yield* Match.value(event.status).pipe(
-      Match.when("Queued", () => handleQueuedJob(cloudEvent)),
-      Match.when("Processing", () => handleProcessingJob(cloudEvent)),
       Match.when("Completed", () => handleCompletedJob(cloudEvent)),
       Match.when("Failed", () => handleFailedJob(cloudEvent)),
       Match.when("Cancelled", () => handleCancelledJob(cloudEvent)),
-      Match.when("MetadataReady", () =>
-        Effect.fail(
-          new HttpApiError.InternalServerError().pipe(
-            Effect.tap(() => Effect.logError("MetadataReady state is internal only"))
-          )
-        )),
-      Match.exhaustive
+      Match.orElse(() =>
+        Effect.logInfo("Skipping notification for non-terminal state", {
+          status: event.status
+        }).pipe(Effect.as(EventProcessingResult.make({
+          eventType: `Job${event.status}`,
+          jobId: event.jobId,
+          status: event.status,
+          eventId: event.eventId,
+          processed: false,
+          stored: false,
+          message: "Skipped non-terminal state"
+        })))
+      )
     )
   })
 

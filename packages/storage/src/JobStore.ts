@@ -9,8 +9,8 @@ import { JobRepository, JobRepositoryLayer, RepositoryError } from "./JobReposit
  */
 export interface JobStoreInterface {
   readonly createJob: (
-    job: Jobs.QueuedJob
-  ) => Effect.Effect<Jobs.QueuedJob, RepositoryError>
+    job: Jobs.ActiveJob
+  ) => Effect.Effect<Jobs.ActiveJob, RepositoryError>
   readonly findJobById: (
     jobId: Core.JobId
   ) => Effect.Effect<Option.Option<Jobs.TranscriptionJob>, RepositoryError>
@@ -41,15 +41,15 @@ export const JobStoreMock = EffectLayer.sync(JobStore, () => {
   const idempotencyMap = new Map<string, Core.JobId>()
 
   return {
-    createJob: (job: Jobs.QueuedJob) =>
+    createJob: (job: Jobs.ActiveJob) =>
       Effect.gen(function*() {
         if (job.idempotencyKey) {
           const existingJobId = idempotencyMap.get(job.idempotencyKey)
           if (existingJobId) {
             const existingJob = jobs.get(existingJobId)
-            if (existingJob && existingJob._tag === "QueuedJob") {
+            if (existingJob && Jobs.isActiveJob(existingJob)) {
               yield* Effect.logInfo(`Returning existing job: ${existingJob.id}`)
-              return existingJob
+              return existingJob as Jobs.ActiveJob
             }
           }
         }
@@ -170,7 +170,7 @@ const JobStoreLayer = EffectLayer.effect(
     const repository = yield* JobRepository
 
     return {
-      createJob: (job: Jobs.QueuedJob) => repository.createJob(job),
+      createJob: (job: Jobs.ActiveJob) => repository.createJob(job),
 
       findJobByIdempotencyKey: (key) => repository.findJobByIdempotencyKey(key),
 

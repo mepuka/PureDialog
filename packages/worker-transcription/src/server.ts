@@ -2,7 +2,7 @@ import { HttpApiBuilder, HttpApiSwagger, HttpServer } from "@effect/platform"
 import { NodeHttpServer } from "@effect/platform-node"
 import { Config, Layer as IngestionLayer } from "@puredialog/ingestion"
 import { LLMServiceLive } from "@puredialog/llm"
-import { LLMArtifactStoreLayer } from "@puredialog/storage"
+import { JobStoreLayerLive, LLMArtifactStoreLayer } from "@puredialog/storage"
 import { Layer } from "effect"
 import { createServer } from "node:http"
 import { TranscriptionWorkerApi } from "./http/api.js"
@@ -17,6 +17,7 @@ const port = Number(process.env.PORT) || 8080
 
 const RuntimeLayer = Layer.mergeAll(
   LLMServiceLive,
+  JobStoreLayerLive,
   LLMArtifactStoreLayer,
   Config.CloudStorageConfigLayer,
   IngestionLayer.CloudStorageLayer,
